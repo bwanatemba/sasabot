@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# Load these from environment variables on Render
+
 ACCESS_TOKEN = os.getenv('WHATSAPP_ACCESS_TOKEN')
 TEMPLATE_NAME = os.getenv('WHATSAPP_TEMPLATE_NAME')  # e.g., 'hello_world'
 LANGUAGE_CODE = os.getenv('WHATSAPP_TEMPLATE_LANG', 'en_US')
@@ -16,8 +16,8 @@ def home():
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
-        # Webhook verification challenge
-        VERIFY_TOKEN = os.getenv("META_VERIFY_TOKEN")  # define in Render secret
+        
+        VERIFY_TOKEN = os.getenv("META_VERIFY_TOKEN")  
         mode = request.args.get("hub.mode")
         token = request.args.get("hub.verify_token")
         challenge = request.args.get("hub.challenge")
