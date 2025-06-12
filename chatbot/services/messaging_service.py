@@ -234,11 +234,11 @@ def clean_phone_number(phone_number):
 def handle_user_message(data):
     """
     Handle incoming user messages with the new flow
-    """
-    try:
+    """    try:
         if not data or not isinstance(data, dict):
             return jsonify({"error": "Invalid data format"}), 400
-              phone_number = data.get('phone_number')
+        
+        phone_number = data.get('phone_number')
         message = data.get('message')
         button_id = data.get('button_id')  # For button responses
         
