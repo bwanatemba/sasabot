@@ -6,12 +6,23 @@ logger = logging.getLogger(__name__)
 
 def format_phone_number(phone_number):
     """
-    Format phone number to include country code
+    Format phone number while preserving international format
     """
-    phone_number = str(phone_number)
-    if not phone_number.startswith('254'):
-        phone_number = '254' + phone_number.lstrip('0')
-    return phone_number
+    if not phone_number:
+        return phone_number
+    
+    # Convert to string and remove any whitespace
+    phone_number = str(phone_number).strip()
+    
+    # Remove any non-digit characters except the leading +
+    if phone_number.startswith('+'):
+        # Keep the + for international format
+        cleaned = '+' + ''.join(filter(str.isdigit, phone_number[1:]))
+    else:
+        # Remove all non-digit characters
+        cleaned = ''.join(filter(str.isdigit, phone_number))
+    
+    return cleaned
 
 def validate_whatsapp_webhook_data(data):
     """

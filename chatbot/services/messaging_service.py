@@ -211,6 +211,26 @@ def is_trigger_word(message):
     trigger_words = ["hi", "hello", "sasabot"]
     return message.lower().strip() in trigger_words
 
+def clean_phone_number(phone_number):
+    """
+    Clean and format phone number while preserving international formats
+    """
+    if not phone_number:
+        return phone_number
+    
+    # Convert to string and remove any whitespace
+    phone_number = str(phone_number).strip()
+    
+    # Remove any non-digit characters except the leading +
+    if phone_number.startswith('+'):
+        # Keep the + for international format
+        cleaned = '+' + ''.join(filter(str.isdigit, phone_number[1:]))
+    else:
+        # Remove all non-digit characters
+        cleaned = ''.join(filter(str.isdigit, phone_number))
+    
+    return cleaned
+
 def handle_user_message(data):
     """
     Handle incoming user messages with the new flow
@@ -221,15 +241,11 @@ def handle_user_message(data):
             
         phone_number = data.get('phone_number')
         message = data.get('message')
-        button_id = data.get('button_id')  # For button responses
-        
-        if not phone_number:
+        button_id = data.get('button_id')  # For button responses        if not phone_number:
             return jsonify({"error": "Missing phone number"}), 400
             
-        # Format phone number
-        phone_number = str(phone_number)
-        if not phone_number.startswith('254'):
-            phone_number = '254' + phone_number.lstrip('0')
+        # Clean phone number while preserving international format
+        phone_number = clean_phone_number(phone_number)
 
         try:
             # Handle button responses
