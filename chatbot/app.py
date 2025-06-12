@@ -1,61 +1,98 @@
 from flask import Flask, request, jsonify
-import requests
+from services import messaging_service
 import os
+import logging
+from functools import wraps
+from datetime import datetime
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+def setup_logging():
+    """
+    Set up logging configuration with proper directory creation
+    and error handling.
+    """
+    try:
+        # Create logs directory if it doesn't exist
+        log_dir = Path('logs')
+        log_dir.mkdir(exist_ok=True)
+        
+        # Generate log filename
+        log_file = log_dir / f'app_{datetime.now().strftime("%Y%m%d")}.log'
+        
+        # Configure logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler(),
+                logging.FileHandler(str(log_file))
+            ]
+        )
+        
+        logger = logging.getLogger(__name__)
+        logger.info(f"Logging initialized. Log file: {log_file}")
+        return logger
+        
+    except Exception as e:
+        # Set up basic console logging if file logging fails
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[logging.StreamHandler()]
+        )
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to set up file logging: {str(e)}")
+        logger.info("Falling back to console logging only")
+        return logger
+
+logger = setup_logging()
 
 app = Flask(__name__)
 
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
-ACCESS_TOKEN = os.getenv('WHATSAPP_ACCESS_TOKEN')
-TEMPLATE_NAME = os.getenv('WHATSAPP_TEMPLATE_NAME')  # e.g., 'hello_world'
-LANGUAGE_CODE = os.getenv('WHATSAPP_TEMPLATE_LANG', 'en_US')
-
-@app.route("/", methods=["GET"])
-def home():
-    return "SasaBot Webhook is live!"
-
-@app.route("/webhook", methods=["GET", "POST"])
-def webhook():
-    if request.method == "GET":
+def require_api_key(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key')
+        if not api_key:
+            logger.warning('API request made without API key')
+            return jsonify({"error": "No API key provided"}), 401
         
-        VERIFY_TOKEN = os.getenv("META_VERIFY_TOKEN")  
-        mode = request.args.get("hub.mode")
-        token = request.args.get("hub.verify_token")
-        challenge = request.args.get("hub.challenge")
-        if mode == "subscribe" and token == VERIFY_TOKEN:
-            return challenge, 200
-        else:
-            return "Verification failed", 403
+        if api_key != os.getenv('API_KEY'):
+            logger.warning(f'Invalid API key used: {api_key[:6]}...')
+            return jsonify({"error": "Invalid API key"}), 401
+        
+        return f(*args, **kwargs)
+    return decorated_function
 
-    if request.method == "POST":
-        data = request.json
-        try:
-            message = data["entry"][0]["changes"][0]["value"]["messages"][0]
-            phone_number_id = data["entry"][0]["changes"][0]["value"]["metadata"]["phone_number_id"]
-            sender_phone = message["from"]
-            msg_text = message["text"]["body"].lower()
+@app.errorhandler(400)
+def handle_bad_request(e):
+    return jsonify({"error": "Bad request, check your JSON payload"}), 400
 
-            if msg_text == "hello":
-                url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
-                headers = {
-                    "Authorization": f"Bearer {ACCESS_TOKEN}",
-                    "Content-Type": "application/json"
-                }
-                payload = {
-                    "messaging_product": "whatsapp",
-                    "to": sender_phone,
-                    "type": "template",
-                    "template": {
-                        "name": TEMPLATE_NAME,
-                        "language": { "code": LANGUAGE_CODE }
-                    }
-                }
-                res = requests.post(url, json=payload, headers=headers)
-                print("Template sent:", res.status_code, res.text)
+@app.errorhandler(405)
+def handle_method_not_allowed(e):
+    return jsonify({"error": f"Method {request.method} is not allowed for this endpoint"}), 405
 
-        except Exception as e:
-            print("Error:", e)
+@app.errorhandler(500)
+def handle_server_error(e):
+    return jsonify({"error": "Internal server error occurred"}), 500
 
-        return jsonify(status="received"), 200
+@app.route('/')
+def home():
+    return {"message": "Welcome to the API"}, 200
 
-if __name__ == "__main__":
+# Handle Incoming WhatsApp Messages
+@app.route('/whatsapp/message', methods=['GET', 'POST'])
+def handle_whatsapp_webhook():
+    if request.method == 'GET':
+        return messaging_service.verify_webhook()
+    return messaging_service.process_whatsapp_message(request.json)
+
+if __name__ == '__main__':
     app.run(debug=True)
+

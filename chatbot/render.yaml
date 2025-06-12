@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: sasabot-whatsapp-service
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    healthCheckPath: /
+    envVars:
+      - key: FLASK_ENV
+        value: production
+    autoDeploy: true
