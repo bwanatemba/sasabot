@@ -234,7 +234,8 @@ def clean_phone_number(phone_number):
 def handle_user_message(data):
     """
     Handle incoming user messages with the new flow
-    """    try:
+    """
+    try:
         if not data or not isinstance(data, dict):
             return jsonify({"error": "Invalid data format"}), 400
         
