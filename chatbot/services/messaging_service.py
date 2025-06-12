@@ -238,10 +238,11 @@ def handle_user_message(data):
     try:
         if not data or not isinstance(data, dict):
             return jsonify({"error": "Invalid data format"}), 400
-            
-        phone_number = data.get('phone_number')
+              phone_number = data.get('phone_number')
         message = data.get('message')
-        button_id = data.get('button_id')  # For button responses        if not phone_number:
+        button_id = data.get('button_id')  # For button responses
+        
+        if not phone_number:
             return jsonify({"error": "Missing phone number"}), 400
             
         # Clean phone number while preserving international format
