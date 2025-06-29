@@ -443,21 +443,24 @@ def export_analytics():
         
         if result.get('success'):
             # Convert to CSV
-            import pandas as pd
-            df = pd.DataFrame(result['data'])
-            
-            output = io.StringIO()
-            df.to_csv(output, index=False)
-            output.seek(0)
-            
-            filename = f"admin_{data_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            
-            return send_file(
-                io.BytesIO(output.getvalue().encode()),
-                mimetype='text/csv',
-                as_attachment=True,
-                download_name=filename
-            )
+            try:
+                import pandas as pd
+                df = pd.DataFrame(result['data'])
+                
+                output = io.StringIO()
+                df.to_csv(output, index=False)
+                output.seek(0)
+                
+                filename = f"admin_{data_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                
+                return send_file(
+                    io.BytesIO(output.getvalue().encode()),
+                    mimetype='text/csv',
+                    as_attachment=True,
+                    download_name=filename
+                )
+            except ImportError:
+                return jsonify({"error": "CSV export is not available due to missing dependencies"}), 500
         else:
             flash(f"Export failed: {result.get('error', 'Unknown error')}", 'error')
             return redirect(url_for('admin.analytics'))

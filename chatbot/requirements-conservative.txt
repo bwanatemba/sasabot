@@ -1,3 +1,6 @@
+# Alternative requirements.txt with conservative versions
+# Use this if you're still experiencing numpy/pandas compatibility issues
+
 # Core Flask dependencies
 Flask==2.3.3
 Flask-Login==0.6.3
@@ -12,9 +15,9 @@ python-dotenv==1.0.0
 email-validator==2.0.0
 python-dateutil==2.8.2
 
-# Data processing - order matters for numpy/pandas compatibility
-numpy==1.24.3
-pandas==2.1.1
+# Data processing - conservative versions to avoid compatibility issues
+numpy==1.21.6
+pandas==1.5.3
 
 # Database
 mongoengine==0.27.0

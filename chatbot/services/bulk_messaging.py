@@ -1,5 +1,10 @@
 import csv
-import pandas as pd
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError as e:
+    PANDAS_AVAILABLE = False
+    print(f"Warning: pandas import failed: {e}")
 import logging
 from flask import jsonify
 from models import Customer, ChatSession, Business, Vendor, db
@@ -179,6 +184,9 @@ class BulkMessagingService:
             skipped_count = 0
             errors = []
             
+            if not PANDAS_AVAILABLE:
+                return {"error": "CSV processing is not available due to missing dependencies"}
+            
             df = pd.read_csv(csv_file_path)
             
             # Expected columns: phone_number, name (optional), email (optional)
@@ -265,6 +273,9 @@ class BulkMessagingService:
             
             # Create directory if it doesn't exist
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            
+            if not PANDAS_AVAILABLE:
+                return {"error": "CSV export is not available due to missing dependencies"}
             
             df = pd.DataFrame(csv_data)
             df.to_csv(filepath, index=False)

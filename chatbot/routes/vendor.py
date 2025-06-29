@@ -14,7 +14,12 @@ import os
 import secrets
 import string
 from datetime import datetime, timedelta
-import pandas as pd
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError as e:
+    PANDAS_AVAILABLE = False
+    print(f"Warning: pandas import failed: {e}")
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 
