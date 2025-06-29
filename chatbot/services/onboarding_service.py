@@ -46,8 +46,8 @@ class OnboardingService:
             
             return send_whatsapp_interactive_message(
                 phone_number,
-                "Welcome Aboard Sasabot",
-                "Hey there, Welcome aboard! My name is Sasha, your onboarding assistant. I'm here to help get your business set up so we can support your marketing and communication goals. Let's start with a few quick details. Ready?",
+                "SasaBot Business Onboarding",
+                "Hey there, Welcome aboard!\n\nMy name is *Sasha* 👩‍🦰, your onboarding assistant.\nI'm here to help get your business set up so we can support your marketing and communication goals. Let's start with a few quick details. Ready?",
                 "Select a button to start",
                 buttons
             )
@@ -61,7 +61,7 @@ class OnboardingService:
         from services.messaging_service import send_whatsapp_interactive_message, send_whatsapp_text_message
         
         try:
-            state = OnboardingState.query.filter_by(phone_number=phone_number).first()
+            state = OnboardingState.objects(phone_number=phone_number).first()
             if not state:
                 return send_whatsapp_text_message(phone_number, "Please start onboarding by typing 'hello' or 'hi'.")
             
