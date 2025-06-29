@@ -167,7 +167,7 @@ class OnboardingService:
         state.data = data
         state.save()
         
-        buttons = [{"text": "Complete registration", "id": "complete_registration"}]
+        buttons = [{"text": "Finish Registration", "id": "complete_registration"}]
         
         return send_whatsapp_interactive_message(
             state.phone_number,
