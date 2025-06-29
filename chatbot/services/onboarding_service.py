@@ -1,6 +1,5 @@
 import logging
 from models import OnboardingState, Vendor, Business, Customer
-from services.messaging_service import send_whatsapp_interactive_message, send_whatsapp_text_message
 from werkzeug.security import generate_password_hash
 
 logger = logging.getLogger(__name__)
@@ -26,6 +25,8 @@ class OnboardingService:
     
     def start_onboarding(self, phone_number):
         """Start the onboarding process"""
+        from services.messaging_service import send_whatsapp_interactive_message, send_whatsapp_text_message
+        
         try:
             # Check if user already has an onboarding state
             state = OnboardingState.objects(phone_number=phone_number).first()
@@ -57,6 +58,8 @@ class OnboardingService:
     
     def handle_onboarding_response(self, phone_number, message=None, button_id=None):
         """Handle user responses during onboarding"""
+        from services.messaging_service import send_whatsapp_interactive_message, send_whatsapp_text_message
+        
         try:
             state = OnboardingState.query.filter_by(phone_number=phone_number).first()
             if not state:
@@ -114,6 +117,8 @@ class OnboardingService:
     
     def _move_to_next_step(self, state, message, data=None):
         """Move to the next step in onboarding"""
+        from services.messaging_service import send_whatsapp_text_message
+        
         next_step = self.STEPS.get(state.current_step)
         if next_step:
             state.current_step = next_step
@@ -125,6 +130,8 @@ class OnboardingService:
     
     def _send_category_selection(self, state, data):
         """Send business category selection"""
+        from services.messaging_service import send_whatsapp_interactive_message
+        
         state.current_step = "collect_business_category"
         state.data = data
         state.save()
@@ -145,6 +152,8 @@ class OnboardingService:
     
     def _send_completion_message(self, state, data):
         """Send completion message"""
+        from services.messaging_service import send_whatsapp_interactive_message
+        
         state.current_step = "complete_registration"
         state.data = data
         state.save()
@@ -161,6 +170,8 @@ class OnboardingService:
     
     def _complete_registration(self, state):
         """Complete the registration process"""
+        from services.messaging_service import send_whatsapp_interactive_message, send_whatsapp_text_message
+        
         try:
             data = state.data
             
