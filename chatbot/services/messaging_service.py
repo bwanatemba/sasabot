@@ -5,7 +5,6 @@ from flask import jsonify, request
 from dotenv import load_dotenv
 from models import OnboardingState, Customer
 from services.onboarding_service import onboarding_service
-from services.mpesa_service import create_order_and_initiate_payment
 
 load_dotenv()
 logger = logging.getLogger(__name__)
