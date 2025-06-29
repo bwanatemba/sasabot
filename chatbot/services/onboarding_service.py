@@ -217,7 +217,7 @@ class OnboardingService:
             state.delete()
             
             # Send password message
-            buttons = [{"type": "URL", "text": "Dashboard Login", "url": "https://google.com"}]
+            buttons = [{"text": "Dashboard Login", "id": "dashboard_login"}]
             
             return send_whatsapp_interactive_message(
                 state.phone_number,
