@@ -3,7 +3,6 @@ import logging
 from openai import OpenAI
 from dotenv import load_dotenv
 from models import Business, Product, ProductVariation, Category, Order, Customer, ChatSession, ChatMessage
-from services.messaging_service import send_whatsapp_interactive_message, send_whatsapp_text_message
 import re
 
 load_dotenv()
@@ -32,6 +31,7 @@ def process_gpt_interaction(phone_number, message, business_id=None):
             business = Business.query.get(business_id)
         
         if not business:
+            from services.messaging_service import send_whatsapp_text_message
             return send_whatsapp_text_message(phone_number, "Sorry, I couldn't find the business information.")
         
         # Get or create chat session
@@ -101,12 +101,14 @@ def process_gpt_interaction(phone_number, message, business_id=None):
         db.session.commit()
         
         # Send response via WhatsApp
+        from services.messaging_service import send_whatsapp_text_message
         send_whatsapp_text_message(phone_number, gpt_response)
         
         return gpt_response
     
     except Exception as e:
         logger.error(f"OpenAI interaction error: {str(e)}")
+        from services.messaging_service import send_whatsapp_text_message
         send_whatsapp_text_message(phone_number, "Sorry, I'm having trouble processing your request right now.")
         raise
 
@@ -138,6 +140,7 @@ def extract_product_id(message):
 
 def handle_order_tracking(phone_number, message, business_id):
     """Handle order tracking requests"""
+    from services.messaging_service import send_whatsapp_text_message
     return send_whatsapp_text_message(phone_number, "Kindly enter your order number for follow-up")
 
 def handle_product_inquiry(phone_number, business_id):
@@ -148,6 +151,7 @@ def handle_product_inquiry(phone_number, business_id):
     categories = Category.query.filter_by(business_id=business_id).all()
     
     if not categories:
+        from services.messaging_service import send_whatsapp_text_message
         return send_whatsapp_text_message(phone_number, "Sorry, no product categories are available at the moment.")
     
     # Create buttons for categories (max 3 buttons)
@@ -158,6 +162,7 @@ def handle_product_inquiry(phone_number, business_id):
             "id": f"category_{category.id}"
         })
     
+    from services.messaging_service import send_whatsapp_interactive_message
     return send_whatsapp_interactive_message(
         phone_number,
         f"{business.name} Products/Services",
@@ -173,6 +178,7 @@ def handle_product_details(phone_number, product_id, business_id):
     product = Product.query.filter_by(product_id=product_id, business_id=business_id).first()
     
     if not product:
+        from services.messaging_service import send_whatsapp_text_message
         return send_whatsapp_text_message(phone_number, f"Sorry, product {product_id} not found.")
     
     # Create product message template
@@ -187,6 +193,7 @@ def handle_product_details(phone_number, product_id, business_id):
     # Prepare body text
     body = f"{product.name}\n${product.price:.2f}\n{product.description or ''}"
     
+    from services.messaging_service import send_whatsapp_interactive_message
     return send_whatsapp_interactive_message(
         phone_number,
         "Product Details",  # Could be product image URL if available
@@ -202,6 +209,7 @@ def handle_category_selection(phone_number, category_id):
     products = Product.query.filter_by(category_id=category_id, is_active=True).all()
     
     if not products:
+        from services.messaging_service import send_whatsapp_text_message
         return send_whatsapp_text_message(phone_number, "Sorry, no products available in this category.")
     
     # Send list of products with their IDs
@@ -213,4 +221,5 @@ def handle_category_selection(phone_number, category_id):
     
     product_list += "Reply with a product ID to see details and purchase options."
     
+    from services.messaging_service import send_whatsapp_text_message
     return send_whatsapp_text_message(phone_number, product_list)

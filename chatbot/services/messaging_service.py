@@ -5,7 +5,6 @@ from flask import jsonify, request
 from dotenv import load_dotenv
 from models import OnboardingState, Customer
 from services.onboarding_service import onboarding_service
-from services.openai_service import process_gpt_interaction, handle_category_selection
 from services.mpesa_service import create_order_and_initiate_payment
 
 load_dotenv()
@@ -528,6 +527,7 @@ def handle_button_response(phone_number, button_id):
             return onboarding_service.start_onboarding(phone_number)
         
         elif button_id.startswith("category_"):
+            from services.openai_service import handle_category_selection
             category_id = int(button_id.split("_")[1])
             return handle_category_selection(phone_number, category_id)
         
@@ -720,6 +720,7 @@ def handle_user_message(data):
                 
                 else:
                     # Process with GPT
+                    from services.openai_service import process_gpt_interaction
                     response = process_gpt_interaction(phone_number, message)
                     return jsonify({"message": "GPT response sent", "gpt_response": response}), 200
             
