@@ -74,6 +74,15 @@ class OnboardingService:
                     return self._move_to_next_step(state, "Great! First, I'd love to know who I'm speaking with. What's your name?")
                 elif button_id == "complete_registration" and current_step == "complete_registration":
                     return self._complete_registration(state)
+                elif current_step == "collect_business_category" and button_id in ["electronics", "food", "technology"]:
+                    # Map button IDs to proper category names
+                    category_map = {
+                        "electronics": "Electronics",
+                        "food": "Food",
+                        "technology": "Technology"
+                    }
+                    data['business_category'] = category_map[button_id]
+                    return self._send_completion_message(state, data)
             
             # Handle text responses
             elif message:
