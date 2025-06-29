@@ -47,7 +47,7 @@ class OnboardingService:
             return send_whatsapp_interactive_message(
                 phone_number,
                 "SasaBot Business Onboarding",
-                "Hey there, Welcome aboard!\n\nMy name is *Sasha* 👩‍🦰, your onboarding assistant.\nI'm here to help get your business set up so we can support your marketing and communication goals. Let's start with a few quick details. Ready?",
+                "Hey there, Welcome aboard!\n\nMy name is *Sasha* 👩🏾‍🦱, your onboarding assistant.\nI'm here to help get your business set up so we can support your marketing and communication goals. \n\nLet's start with a few quick details. Ready?",
                 "Select a button to start",
                 buttons
             )
@@ -71,7 +71,7 @@ class OnboardingService:
             # Handle button responses
             if button_id:
                 if button_id == "lets_go" and current_step == "welcome":
-                    return self._move_to_next_step(state, "Great! First, I'd love to know who I'm speaking with. What's your name?")
+                    return self._move_to_next_step(state, "Great! First, I'd love to know who I'm speaking with.\n\nWhat's your Name?")
                 elif button_id == "complete_registration" and current_step == "complete_registration":
                     return self._complete_registration(state)
                 elif current_step == "collect_business_category" and button_id in ["electronics", "food", "technology"]:
@@ -88,27 +88,27 @@ class OnboardingService:
             elif message:
                 if current_step == "collect_name":
                     data['vendor_name'] = message
-                    return self._move_to_next_step(state, f"Nice to meet you, {message}! What's the best email address to reach you at?", data)
+                    return self._move_to_next_step(state, f"Nice to meet you, *{message}*!\n\nWhat's the best Email Address to reach you at?", data)
                 
                 elif current_step == "collect_email":
                     data['vendor_email'] = message
-                    return self._move_to_next_step(state, "And could I have your phone number, in case we need to get in touch?", data)
+                    return self._move_to_next_step(state, "And could I have your Phone Number, in case we need to get in touch? 🥹", data)
                 
                 elif current_step == "collect_phone":
                     data['vendor_phone'] = message
-                    return self._move_to_next_step(state, "Awesome, now let's talk about your business. What's your business called?", data)
+                    return self._move_to_next_step(state, "Awesome, now let's talk about your business. What's your Business called?", data)
                 
                 elif current_step == "collect_business_name":
                     data['business_name'] = message
-                    return self._move_to_next_step(state, "Got it! Can you give me a quick description of what your business does?", data)
+                    return self._move_to_next_step(state, "Got it! Can you give me a quick Description of what your business does?", data)
                 
                 elif current_step == "collect_business_description":
                     data['business_description'] = message
-                    return self._move_to_next_step(state, "Nice, that helps us tailor our support better. What WhatsApp number does your business use to connect with customers?", data)
+                    return self._move_to_next_step(state, "Nice, that helps us tailor our support better. What WhatsApp Number does your business use to connect with customers?", data)
                 
                 elif current_step == "collect_business_whatsapp":
                     data['business_whatsapp'] = message
-                    return self._move_to_next_step(state, "And do you use a different email address for business communication? If yes, please drop it below. Type N/A If same as personal or you dont have a business email", data)
+                    return self._move_to_next_step(state, "And do you use a different email address for business communication?\nIf yes, please drop it below.\n\n_Type *N/A* If same as personal or you dont have a business email_", data)
                 
                 elif current_step == "collect_business_email":
                     data['business_email'] = message if message.upper() != "N/A" else None
@@ -172,7 +172,7 @@ class OnboardingService:
         return send_whatsapp_interactive_message(
             state.phone_number,
             "Complete Sasabot Onboarding",
-            "That's everything I need for now!",
+            "💯\nThat's everything I need for now!",
             "Click the button to complete registration",
             buttons
         )
@@ -222,7 +222,7 @@ class OnboardingService:
             return send_whatsapp_interactive_message(
                 state.phone_number,
                 "Your Registration to SasaBot is complete!",
-                f"You are successfully registered to SasaBot. You can login to the vendor dashboard to view your business profile, add products and more. Your password is {password}. Keep it safe and do not send it to anybody. You can change your password via your dashboard profile.",
+                f"You are Successfully Registered to SasaBot. You can login to the vendor dashboard to view your business profile, add products and more.\nYour password is *{password}*.\nKeep it safe and do not send it to anybody. You can change your password via your dashboard profile.",
                 "Select the button to login to your dashboard",
                 buttons
             )

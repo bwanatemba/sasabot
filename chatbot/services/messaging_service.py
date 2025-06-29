@@ -560,7 +560,7 @@ def handle_button_response(phone_number, button_id):
             return cancel_order(phone_number, order_id)
         
         elif button_id == "dashboard_login":
-            message = "Please visit our vendor dashboard at: https://your-frontend-domain.vercel.app/login"
+            message = "*Vendor Dashboard Login:*\n\nClick the link below to Login to your vendor dashboard to change your password, update product catalog and access other functionality:\n\n*https://your-frontend-domain.vercel.app/login*"
         
         elif button_id == "see_all_options":
             # Handle when more than 3 options were available
