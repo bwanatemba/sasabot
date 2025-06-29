@@ -2,9 +2,10 @@ from flask import Blueprint, request, jsonify
 from services.mpesa_service import mpesa_service
 import logging
 from flask_login import login_required, current_user
-from models import Order, Customer, Product, db
-from sqlalchemy import func
+from models import Order, Customer, Product, Business
 from datetime import datetime, timedelta
+from mongoengine import Q
+from services.auth.auth_manager import get_user_role
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 logger = logging.getLogger(__name__)
@@ -44,9 +45,12 @@ def test_webhook():
 def sales_data():
     """Get sales data for charts"""
     try:
-        if current_user.role == 'vendor':
-            # Get vendor's business IDs
-            business_ids = [b.id for b in current_user.businesses]
+        user_role = get_user_role(current_user)
+        
+        if user_role == 'vendor':
+            # Get vendor's businesses
+            businesses = Business.objects(vendor=current_user.id)
+            business_ids = [str(b.id) for b in businesses]
             if not business_ids:
                 return jsonify({'success': True, 'labels': [], 'values': []})
             
@@ -54,27 +58,24 @@ def sales_data():
             end_date = datetime.utcnow().date()
             start_date = end_date - timedelta(days=6)
             
-            sales_data = db.session.query(
-                func.date(Order.created_at).label('date'),
-                func.sum(Order.total_amount).label('total')
-            ).filter(
-                Order.business_id.in_(business_ids),
-                Order.status == 'completed',
-                func.date(Order.created_at) >= start_date
-            ).group_by(func.date(Order.created_at)).all()
+            # Query orders for the date range and business IDs
+            orders = Order.objects(
+                business__in=business_ids,
+                status='completed',
+                created_at__gte=datetime.combine(start_date, datetime.min.time()),
+                created_at__lte=datetime.combine(end_date, datetime.max.time())
+            )
             
-        elif current_user.role == 'admin':
+        else:  # admin or default case
             # Get all sales data
             end_date = datetime.utcnow().date()
             start_date = end_date - timedelta(days=6)
             
-            sales_data = db.session.query(
-                func.date(Order.created_at).label('date'),
-                func.sum(Order.total_amount).label('total')
-            ).filter(
-                Order.status == 'completed',
-                func.date(Order.created_at) >= start_date
-            ).group_by(func.date(Order.created_at)).all()
+            orders = Order.objects(
+                status='completed',
+                created_at__gte=datetime.combine(start_date, datetime.min.time()),
+                created_at__lte=datetime.combine(end_date, datetime.max.time())
+            )
         
         # Create labels and values arrays
         labels = []
@@ -84,13 +85,13 @@ def sales_data():
             date = start_date + timedelta(days=i)
             labels.append(date.strftime('%m/%d'))
             
-            # Find sales for this date
-            total = 0
-            for sale in sales_data:
-                if sale.date == date:
-                    total = float(sale.total)
-                    break
-            values.append(total)
+            # Calculate total sales for this date
+            day_start = datetime.combine(date, datetime.min.time())
+            day_end = datetime.combine(date, datetime.max.time())
+            
+            day_orders = [order for order in orders if day_start <= order.created_at <= day_end]
+            total = sum(order.total_amount for order in day_orders)
+            values.append(float(total))
         
         return jsonify({
             'success': True,
@@ -106,19 +107,22 @@ def sales_data():
 def orders_data():
     """Get orders status distribution for charts"""
     try:
-        if current_user.role == 'vendor':
-            business_ids = [b.id for b in current_user.businesses]
+        user_role = get_user_role(current_user)
+        
+        if user_role == 'vendor':
+            businesses = Business.objects(vendor=current_user.id)
+            business_ids = [str(b.id) for b in businesses]
             if not business_ids:
                 return jsonify({'success': True, 'values': [0, 0, 0, 0]})
             
-            orders_query = Order.query.filter(Order.business_id.in_(business_ids))
-        elif current_user.role == 'admin':
-            orders_query = Order.query
+            base_query = Order.objects(business__in=business_ids)
+        else:  # admin or default case
+            base_query = Order.objects()
         
-        pending = orders_query.filter(Order.status == 'pending').count()
-        processing = orders_query.filter(Order.status == 'processing').count()
-        completed = orders_query.filter(Order.status == 'completed').count()
-        cancelled = orders_query.filter(Order.status == 'cancelled').count()
+        pending = base_query.filter(status='pending').count()
+        processing = base_query.filter(status='processing').count()
+        completed = base_query.filter(status='completed').count()
+        cancelled = base_query.filter(status='cancelled').count()
         
         return jsonify({
             'success': True,
@@ -133,20 +137,23 @@ def orders_data():
 def products_data():
     """Get top products by stock level"""
     try:
-        if current_user.role == 'vendor':
-            business_ids = [b.id for b in current_user.businesses]
+        user_role = get_user_role(current_user)
+        
+        if user_role == 'vendor':
+            businesses = Business.objects(vendor=current_user.id)
+            business_ids = [str(b.id) for b in businesses]
             if not business_ids:
                 return jsonify({'success': True, 'labels': [], 'values': []})
             
-            products = Product.query.filter(
-                Product.business_id.in_(business_ids),
-                Product.is_active == True
-            ).order_by(Product.stock_quantity.desc()).limit(10).all()
+            products = Product.objects(
+                business__in=business_ids,
+                is_active=True
+            ).order_by('-stock_quantity').limit(10)
             
-        elif current_user.role == 'admin':
-            products = Product.query.filter(
-                Product.is_active == True
-            ).order_by(Product.stock_quantity.desc()).limit(10).all()
+        else:  # admin or default case
+            products = Product.objects(
+                is_active=True
+            ).order_by('-stock_quantity').limit(10)
         
         labels = [p.name[:20] + ('...' if len(p.name) > 20 else '') for p in products]
         values = [p.stock_quantity for p in products]
@@ -165,8 +172,11 @@ def products_data():
 def dashboard_stats():
     """Get real-time dashboard statistics"""
     try:
-        if current_user.role == 'vendor':
-            business_ids = [b.id for b in current_user.businesses]
+        user_role = get_user_role(current_user)
+        
+        if user_role == 'vendor':
+            businesses = Business.objects(vendor=current_user.id)
+            business_ids = [str(b.id) for b in businesses]
             if not business_ids:
                 return jsonify({
                     'success': True,
@@ -176,23 +186,25 @@ def dashboard_stats():
                     'total_products': 0
                 })
             
-            total_sales = db.session.query(func.sum(Order.total_amount)).filter(
-                Order.business_id.in_(business_ids),
-                Order.status == 'completed'
-            ).scalar() or 0
+            # Calculate total sales
+            completed_orders = Order.objects(
+                business__in=business_ids,
+                status='completed'
+            )
+            total_sales = sum(order.total_amount for order in completed_orders)
             
-            total_orders = Order.query.filter(Order.business_id.in_(business_ids)).count()
-            total_customers = Customer.query.filter(Customer.business_id.in_(business_ids)).count()
-            total_products = Product.query.filter(Product.business_id.in_(business_ids)).count()
+            total_orders = Order.objects(business__in=business_ids).count()
+            total_customers = Customer.objects(business__in=business_ids).count()
+            total_products = Product.objects(business__in=business_ids).count()
             
-        elif current_user.role == 'admin':
-            total_sales = db.session.query(func.sum(Order.total_amount)).filter(
-                Order.status == 'completed'
-            ).scalar() or 0
+        else:  # admin or default case
+            # Calculate total sales
+            completed_orders = Order.objects(status='completed')
+            total_sales = sum(order.total_amount for order in completed_orders)
             
-            total_orders = Order.query.count()
-            total_customers = Customer.query.count()
-            total_products = Product.query.count()
+            total_orders = Order.objects().count()
+            total_customers = Customer.objects().count()
+            total_products = Product.objects().count()
         
         return jsonify({
             'success': True,

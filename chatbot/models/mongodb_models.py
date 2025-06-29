@@ -134,7 +134,7 @@ class Order(Document):
     
     # Order details
     total_amount = fields.FloatField(required=True)
-    status = fields.StringField(default='pending', choices=['pending', 'paid', 'processing', 'delivered', 'cancelled'])
+    status = fields.StringField(default='pending', choices=['pending', 'paid', 'processing', 'completed', 'delivered', 'cancelled'])
     payment_status = fields.StringField(default='pending', choices=['pending', 'paid', 'failed'])
     payment_method = fields.StringField(default='mpesa', max_length=50)
     mpesa_transaction_id = fields.StringField(max_length=100)

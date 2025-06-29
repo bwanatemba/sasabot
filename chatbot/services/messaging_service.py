@@ -328,10 +328,10 @@ def generate_order_receipt_pdf(order_id):
 
 def handle_payment_confirmation(phone_number, order_id, mpesa_transaction_id):
     """Handle successful payment confirmation"""
-    from models import Order, db
+    from models import Order
     
     try:
-        order = Order.query.get(order_id)
+        order = Order.objects(id=order_id).first()
         if not order:
             return send_whatsapp_text_message(phone_number, "Order not found.")
         
@@ -339,10 +339,10 @@ def handle_payment_confirmation(phone_number, order_id, mpesa_transaction_id):
         order.payment_status = 'paid'
         order.status = 'processing'
         order.mpesa_transaction_id = mpesa_transaction_id
-        db.session.commit()
+        order.save()
         
         # Generate and send receipt
-        receipt_path = generate_order_receipt_pdf(order_id)
+        receipt_path = generate_order_receipt_pdf(str(order.id))
         
         # Send confirmation message
         confirmation_msg = f"✅ Payment confirmed!\n\n"
@@ -436,32 +436,30 @@ def send_bulk_message(business_id, message, customer_list=None):
 
 def create_chat_session(customer_phone, business_id):
     """Create or get existing chat session"""
-    from models import Customer, ChatSession, db
+    from models import Customer, ChatSession
     import uuid
     
     try:
         # Get or create customer
-        customer = Customer.query.filter_by(phone_number=customer_phone).first()
+        customer = Customer.objects(phone_number=customer_phone).first()
         if not customer:
             customer = Customer(phone_number=customer_phone)
-            db.session.add(customer)
-            db.session.commit()
+            customer.save()
         
         # Check for existing active session
-        existing_session = ChatSession.query.filter_by(
-            customer_id=customer.id,
-            business_id=business_id
-        ).order_by(ChatSession.created_at.desc()).first()
+        existing_session = ChatSession.objects(
+            customer=customer.id,
+            business=business_id
+        ).order_by('-created_at').first()
         
         # Create new session if none exists or if last session is old (more than 24 hours)
         if not existing_session or (datetime.utcnow() - existing_session.created_at).days > 0:
             session = ChatSession(
-                customer_id=customer.id,
-                business_id=business_id,
+                customer=customer.id,
+                business=business_id,
                 session_id=str(uuid.uuid4())
             )
-            db.session.add(session)
-            db.session.commit()
+            session.save()
             return session
         
         return existing_session
@@ -472,18 +470,26 @@ def create_chat_session(customer_phone, business_id):
 
 def log_chat_message(session_id, sender_type, message_text, message_type='text', button_data=None):
     """Log a chat message to the database"""
-    from models import ChatMessage, db
+    from models import ChatMessage, ChatSession
     
     try:
+        # Find the chat session
+        session = ChatSession.objects(session_id=session_id).first()
+        if not session:
+            logger.error(f"Chat session not found: {session_id}")
+            return None
+        
+        # Create the message
         message = ChatMessage(
-            session_id=session_id,
             sender_type=sender_type,
             message_text=message_text,
             message_type=message_type,
             button_data=button_data
         )
-        db.session.add(message)
-        db.session.commit()
+        
+        # Add message to session
+        session.messages.append(message)
+        session.save()
         return message
         
     except Exception as e:

@@ -1,6 +1,6 @@
 import logging
 from flask import jsonify
-from models import Business, Vendor, Customer, Order, ChatSession, ChatMessage, Product, Category, db
+from models import Business, Vendor, Customer, Order, ChatSession, ChatMessage, Product, Category
 from datetime import datetime, timedelta
 from sqlalchemy import func, and_, or_
 import json

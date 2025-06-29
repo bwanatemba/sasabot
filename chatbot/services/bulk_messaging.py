@@ -7,7 +7,7 @@ except ImportError as e:
     print(f"Warning: pandas import failed: {e}")
 import logging
 from flask import jsonify
-from models import Customer, ChatSession, Business, Vendor, db
+from models import Customer, ChatSession, Business, Vendor
 from services.messaging_service import send_whatsapp_text_message, send_whatsapp_interactive_message
 from datetime import datetime, timedelta
 import os
