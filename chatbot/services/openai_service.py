@@ -1,0 +1,216 @@
+import os
+import logging
+from openai import OpenAI
+from dotenv import load_dotenv
+from models import Business, Product, ProductVariation, Category, Order, Customer, ChatSession, ChatMessage
+from services.messaging_service import send_whatsapp_interactive_message, send_whatsapp_text_message
+import re
+
+load_dotenv()
+logger = logging.getLogger(__name__)
+
+def initialize_openai_client():
+    return OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+def process_gpt_interaction(phone_number, message, business_id=None):
+    """Process GPT interaction with business context"""
+    try:
+        client = initialize_openai_client()
+        
+        # Get or create customer
+        from models import db
+        customer = Customer.query.filter_by(phone_number=phone_number).first()
+        if not customer:
+            customer = Customer(phone_number=phone_number)
+            db.session.add(customer)
+            db.session.commit()
+        
+        # Determine business context if not provided
+        if not business_id:
+            business = Business.query.first()  # For now, use first business
+        else:
+            business = Business.query.get(business_id)
+        
+        if not business:
+            return send_whatsapp_text_message(phone_number, "Sorry, I couldn't find the business information.")
+        
+        # Get or create chat session
+        session = ChatSession.query.filter_by(
+            customer_id=customer.id,
+            business_id=business.id
+        ).first()
+        
+        if not session:
+            session = ChatSession(
+                customer_id=customer.id,
+                business_id=business.id,
+                session_id=f"{customer.id}_{business.id}_{phone_number}"
+            )
+            db.session.add(session)
+            db.session.commit()
+        
+        # Save customer message
+        customer_message = ChatMessage(
+            session_id=session.id,
+            sender_type='customer',
+            message_text=message
+        )
+        db.session.add(customer_message)
+        
+        # Get business custom instructions
+        custom_instructions = business.custom_instructions or "You are a helpful customer service assistant."
+        
+        # Build context with business information
+        business_context = f"""
+        Business Name: {business.name}
+        Business Description: {business.description}
+        Business Category: {business.category}
+        Custom Instructions: {custom_instructions}
+        """
+        
+        # Check message intent
+        intent = determine_intent(message)
+        
+        if intent == 'order_tracking':
+            return handle_order_tracking(phone_number, message, business.id)
+        elif intent == 'product_inquiry':
+            return handle_product_inquiry(phone_number, business.id)
+        elif intent == 'product_id':
+            product_id = extract_product_id(message)
+            if product_id:
+                return handle_product_details(phone_number, product_id, business.id)
+        
+        # General GPT response
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": f"{business_context}\n\nYou are a customer service assistant for {business.name}. Use the custom instructions to guide your responses. Keep responses helpful and business-focused."},
+                {"role": "user", "content": message}
+            ]
+        )
+        
+        gpt_response = response.choices[0].message.content
+        
+        # Save GPT response
+        gpt_message = ChatMessage(
+            session_id=session.id,
+            sender_type='gpt',
+            message_text=gpt_response
+        )
+        db.session.add(gpt_message)
+        db.session.commit()
+        
+        # Send response via WhatsApp
+        send_whatsapp_text_message(phone_number, gpt_response)
+        
+        return gpt_response
+    
+    except Exception as e:
+        logger.error(f"OpenAI interaction error: {str(e)}")
+        send_whatsapp_text_message(phone_number, "Sorry, I'm having trouble processing your request right now.")
+        raise
+
+def determine_intent(message):
+    """Determine the intent of the customer message"""
+    message_lower = message.lower()
+    
+    # Order tracking keywords
+    order_keywords = ['order', 'tracking', 'track', 'status', 'delivery', 'ord']
+    if any(keyword in message_lower for keyword in order_keywords):
+        return 'order_tracking'
+    
+    # Product inquiry keywords
+    product_keywords = ['product', 'products', 'service', 'services', 'catalog', 'what do you sell', 'what do you offer']
+    if any(keyword in message_lower for keyword in product_keywords):
+        return 'product_inquiry'
+    
+    # Check if message contains product ID pattern
+    if re.search(r'\b[A-Z0-9]{4,}\b', message):
+        return 'product_id'
+    
+    return 'general'
+
+def extract_product_id(message):
+    """Extract product ID from message"""
+    pattern = r'\b([A-Z0-9]{4,})\b'
+    match = re.search(pattern, message.upper())
+    return match.group(1) if match else None
+
+def handle_order_tracking(phone_number, message, business_id):
+    """Handle order tracking requests"""
+    return send_whatsapp_text_message(phone_number, "Kindly enter your order number for follow-up")
+
+def handle_product_inquiry(phone_number, business_id):
+    """Handle product/service inquiries"""
+    from models import db
+    
+    business = Business.query.get(business_id)
+    categories = Category.query.filter_by(business_id=business_id).all()
+    
+    if not categories:
+        return send_whatsapp_text_message(phone_number, "Sorry, no product categories are available at the moment.")
+    
+    # Create buttons for categories (max 3 buttons)
+    buttons = []
+    for i, category in enumerate(categories[:3]):
+        buttons.append({
+            "text": category.name,
+            "id": f"category_{category.id}"
+        })
+    
+    return send_whatsapp_interactive_message(
+        phone_number,
+        f"{business.name} Products/Services",
+        "We offer a wide range of products sorted in different categories. You can select a category below to see the products in each category",
+        "Select a category to view its products",
+        buttons
+    )
+
+def handle_product_details(phone_number, product_id, business_id):
+    """Handle product details request"""
+    from models import db
+    
+    product = Product.query.filter_by(product_id=product_id, business_id=business_id).first()
+    
+    if not product:
+        return send_whatsapp_text_message(phone_number, f"Sorry, product {product_id} not found.")
+    
+    # Create product message template
+    buttons = [
+        {"text": "Buy Now", "id": f"buy_{product.id}"},
+        {"text": "View Variations", "id": f"variations_{product.id}"}
+    ]
+    
+    if product.allows_customization:
+        buttons.append({"text": "Add Customization", "id": f"customize_{product.id}"})
+    
+    # Prepare body text
+    body = f"{product.name}\n${product.price:.2f}\n{product.description or ''}"
+    
+    return send_whatsapp_interactive_message(
+        phone_number,
+        "Product Details",  # Could be product image URL if available
+        body,
+        "Buy Now, View Variations or Customize",
+        buttons
+    )
+
+def handle_category_selection(phone_number, category_id):
+    """Handle category selection"""
+    from models import db
+    
+    products = Product.query.filter_by(category_id=category_id, is_active=True).all()
+    
+    if not products:
+        return send_whatsapp_text_message(phone_number, "Sorry, no products available in this category.")
+    
+    # Send list of products with their IDs
+    product_list = "Available products:\n\n"
+    for product in products:
+        product_list += f"ID: {product.product_id}\n"
+        product_list += f"Name: {product.name}\n"
+        product_list += f"Price: ${product.price:.2f}\n\n"
+    
+    product_list += "Reply with a product ID to see details and purchase options."
+    
+    return send_whatsapp_text_message(phone_number, product_list)

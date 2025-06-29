@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Messaging{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">📢 Bulk Messaging</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Bulk Text Message -->
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5>📝 Send Text Message</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST" action="{{ url_for('vendor.send_bulk_message') }}">
+                                        <div class="mb-3">
+                                            <label for="business_id" class="form-label">Business</label>
+                                            <select class="form-select" name="business_id" required>
+                                                <option value="">Select Business</option>
+                                                {% for business in businesses %}
+                                                <option value="{{ business.id }}">{{ business.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="message" class="form-label">Message</label>
+                                            <textarea class="form-control" name="message" rows="4" 
+                                                    placeholder="Enter your message here..." required></textarea>
+                                            <div class="form-text">Keep messages concise and engaging</div>
+                                        </div>
+                                        
+                                        <!-- Customer Filters -->
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <h6>👥 Customer Filters (Optional)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label for="start_date" class="form-label">From Date</label>
+                                                        <input type="date" class="form-control" name="start_date">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="end_date" class="form-label">To Date</label>
+                                                        <input type="date" class="form-control" name="end_date">
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-3">
+                                                    <div class="col-md-6">
+                                                        <label for="active_days" class="form-label">Active in Last X Days</label>
+                                                        <input type="number" class="form-control" name="active_days" 
+                                                               placeholder="e.g., 30">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="phone_numbers" class="form-label">Specific Phone Numbers</label>
+                                                        <textarea class="form-control" name="phone_numbers" rows="2"
+                                                                placeholder="254712345678, 254798765432..."></textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-paper-plane"></i> Send Message
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Promotional Message -->
+                        <div class="col-lg-6">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5>🎯 Send Promotional Message</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST" action="{{ url_for('vendor.send_promotional_message') }}">
+                                        <div class="mb-3">
+                                            <label for="promo_business_id" class="form-label">Business</label>
+                                            <select class="form-select" name="business_id" required>
+                                                <option value="">Select Business</option>
+                                                {% for business in businesses %}
+                                                <option value="{{ business.id }}">{{ business.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="header" class="form-label">Header</label>
+                                            <input type="text" class="form-control" name="header" 
+                                                   placeholder="e.g., Special Offer!" required>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="body" class="form-label">Message Body</label>
+                                            <textarea class="form-control" name="body" rows="3" 
+                                                    placeholder="Your promotional message..." required></textarea>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="footer" class="form-label">Footer</label>
+                                            <input type="text" class="form-control" name="footer" 
+                                                   placeholder="e.g., Valid until end of month">
+                                        </div>
+                                        
+                                        <!-- Buttons -->
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <h6>🔘 Interactive Buttons (Optional, Max 3)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Button 1 Text</label>
+                                                        <input type="text" class="form-control" name="button_1_text" 
+                                                               placeholder="e.g., View Offers">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Button 1 ID</label>
+                                                        <input type="text" class="form-control" name="button_1_id" 
+                                                               placeholder="e.g., view_offers">
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-2">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Button 2 Text</label>
+                                                        <input type="text" class="form-control" name="button_2_text" 
+                                                               placeholder="e.g., Contact Us">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Button 2 ID</label>
+                                                        <input type="text" class="form-control" name="button_2_id" 
+                                                               placeholder="e.g., contact_us">
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-2">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Button 3 Text</label>
+                                                        <input type="text" class="form-control" name="button_3_text" 
+                                                               placeholder="e.g., Learn More">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label">Button 3 ID</label>
+                                                        <input type="text" class="form-control" name="button_3_id" 
+                                                               placeholder="e.g., learn_more">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Date Filters -->
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <h6>📅 Customer Filters (Optional)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label for="promo_start_date" class="form-label">From Date</label>
+                                                        <input type="date" class="form-control" name="start_date">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="promo_end_date" class="form-label">To Date</label>
+                                                        <input type="date" class="form-control" name="end_date">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-bullhorn"></i> Send Promotional Message
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Import/Export Section -->
+                    <div class="row mt-4">
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>📤 Import Customers</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted">Upload a CSV file with customer phone numbers to import them for messaging.</p>
+                                    <p class="small"><strong>CSV Format:</strong> phone_number, name (optional), email (optional)</p>
+                                    <a href="{{ url_for('vendor.import_customers') }}" class="btn btn-info">
+                                        <i class="fas fa-upload"></i> Import Customers
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>📥 Export Customers</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted">Export customer lists for your businesses.</p>
+                                    <div class="mb-3">
+                                        <label for="export_business" class="form-label">Select Business</label>
+                                        <select class="form-select" id="export_business">
+                                            <option value="">Select Business</option>
+                                            {% for business in businesses %}
+                                            <option value="{{ business.id }}">{{ business.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <button onclick="exportCustomers()" class="btn btn-secondary">
+                                        <i class="fas fa-download"></i> Export Customers
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportCustomers() {
+    const businessId = document.getElementById('export_business').value;
+    if (!businessId) {
+        alert('Please select a business');
+        return;
+    }
+    window.location.href = `/vendor/export-customers/${businessId}`;
+}
+</script>
+{% endblock %}

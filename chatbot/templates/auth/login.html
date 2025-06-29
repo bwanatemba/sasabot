@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Login - SasaBot{% endblock %}
+
+{% block content %}
+<div class="min-vh-100 d-flex align-items-center">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-5 col-md-7">
+                <div class="card shadow-lg border-0">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <div class="gradient-bg text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                <i class="fas fa-robot fa-2x"></i>
+                            </div>
+                            <h2 class="fw-bold text-primary-custom">Welcome Back</h2>
+                            <p class="text-muted">Sign in to your SasaBot account</p>
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('auth.login') }}" onsubmit="return validateForm('loginForm');" id="loginForm">
+                            <div class="mb-3">
+                                <label for="email_or_phone" class="form-label fw-semibold">Email or Phone Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-user text-muted"></i>
+                                    </span>
+                                    <input type="text" 
+                                           class="form-control border-start-0 ps-0" 
+                                           id="email_or_phone" 
+                                           name="email_or_phone" 
+                                           placeholder="Enter your email or phone number"
+                                           required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="password" class="form-label fw-semibold">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0">
+                                        <i class="fas fa-lock text-muted"></i>
+                                    </span>
+                                    <input type="password" 
+                                           class="form-control border-start-0 ps-0" 
+                                           id="password" 
+                                           name="password" 
+                                           placeholder="Enter your password"
+                                           required>
+                                    <button class="btn btn-outline-secondary border-start-0" 
+                                            type="button" 
+                                            onclick="togglePassword()"
+                                            id="togglePasswordBtn">
+                                        <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary-custom btn-lg py-3">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div class="text-center mt-4">
+                            <p class="text-muted mb-3">Don't have an account?</p>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>To get started:</strong> Send "Hello" to our WhatsApp number to begin the onboarding process and receive your login credentials.
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="text-center">
+                            <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Home
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Admin Credentials Info (for demo purposes) -->
+                <div class="card mt-4 border-warning">
+                    <div class="card-body">
+                        <h6 class="card-title text-warning">
+                            <i class="fas fa-user-shield me-2"></i>Demo Admin Access
+                        </h6>
+                        <small class="text-muted">
+                            <strong>Email:</strong> admin@sasabot.ai<br>
+                            <strong>Password:</strong> sasabot@admin
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePassword() {
+    const passwordInput = document.getElementById('password');
+    const toggleIcon = document.getElementById('togglePasswordIcon');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.className = 'fas fa-eye-slash';
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.className = 'fas fa-eye';
+    }
+}
+
+// Auto-focus on the first input
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('email_or_phone').focus();
+});
+
+// Form validation
+function validateForm(formId) {
+    const form = document.getElementById(formId);
+    const emailOrPhone = document.getElementById('email_or_phone').value.trim();
+    const password = document.getElementById('password').value;
+    
+    if (!emailOrPhone) {
+        showAlert('Please enter your email or phone number.', 'error');
+        return false;
+    }
+    
+    if (!password) {
+        showAlert('Please enter your password.', 'error');
+        return false;
+    }
+    
+    showLoading();
+    return true;
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        <i class="fas fa-${type === 'error' ? 'exclamation-triangle' : 'check-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.card-body');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

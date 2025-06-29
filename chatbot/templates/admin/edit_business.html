@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ business.name }} - Admin - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary fw-bold">Edit Business</h1>
+                    <p class="text-muted">Update business information and settings</p>
+                </div>
+                <a href="{{ url_for('admin.business_detail', business_id=business.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Business
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Business Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Business Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="name" name="name" 
+                                           value="{{ business.name }}" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="category" class="form-label">Category</label>
+                                    <select class="form-select" id="category" name="category">
+                                        <option value="">Select Category</option>
+                                        <option value="Restaurant" {% if business.category == 'Restaurant' %}selected{% endif %}>Restaurant</option>
+                                        <option value="Retail" {% if business.category == 'Retail' %}selected{% endif %}>Retail</option>
+                                        <option value="Services" {% if business.category == 'Services' %}selected{% endif %}>Services</option>
+                                        <option value="E-commerce" {% if business.category == 'E-commerce' %}selected{% endif %}>E-commerce</option>
+                                        <option value="Fashion" {% if business.category == 'Fashion' %}selected{% endif %}>Fashion</option>
+                                        <option value="Electronics" {% if business.category == 'Electronics' %}selected{% endif %}>Electronics</option>
+                                        <option value="Health & Beauty" {% if business.category == 'Health & Beauty' %}selected{% endif %}>Health & Beauty</option>
+                                        <option value="Automotive" {% if business.category == 'Automotive' %}selected{% endif %}>Automotive</option>
+                                        <option value="Other" {% if business.category == 'Other' %}selected{% endif %}>Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Business Email</label>
+                                    <input type="email" class="form-control" id="email" name="email" 
+                                           value="{{ business.email or '' }}">
+                                    <div class="form-text">Primary contact email for the business</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="whatsapp_number" class="form-label">WhatsApp Number</label>
+                                    <input type="tel" class="form-control" id="whatsapp_number" name="whatsapp_number" 
+                                           value="{{ business.whatsapp_number or '' }}" placeholder="+254...">
+                                    <div class="form-text">Include country code (e.g., +254712345678)</div>
+                                </div>
+                            </div>
+                            
+                            <!-- WhatsApp Configuration -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="whatsapp_api_token" class="form-label">WhatsApp API Token</label>
+                                    <input type="password" class="form-control" id="whatsapp_api_token" name="whatsapp_api_token" 
+                                           value="{{ business.whatsapp_api_token or '' }}">
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Get this from your WhatsApp Business API configuration
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="whatsapp_phone_id" class="form-label">WhatsApp Phone Number ID</label>
+                                    <input type="text" class="form-control" id="whatsapp_phone_id" name="whatsapp_phone_id" 
+                                           value="{{ business.whatsapp_phone_id or '' }}">
+                                    <div class="form-text">Phone number ID from WhatsApp Business API</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                               {% if business.is_active %}checked{% endif %}>
+                                        <label class="form-check-label" for="is_active">
+                                            Business is Active
+                                        </label>
+                                    </div>
+                                    <div class="form-text">Inactive businesses won't accept new orders</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Business Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ business.description or '' }}</textarea>
+                            <div class="form-text">Brief description of your business and services</div>
+                        </div>
+                        
+                        <!-- Custom GPT Instructions -->
+                        <div class="mb-4">
+                            <label for="custom_instructions" class="form-label">Custom GPT Instructions</label>
+                            <textarea class="form-control" id="custom_instructions" name="custom_instructions" 
+                                      rows="6" placeholder="Enter custom instructions for the AI assistant...">{{ business.custom_instructions or '' }}</textarea>
+                            <div class="form-text">
+                                <i class="fas fa-robot me-1"></i>
+                                These instructions will guide how the AI assistant interacts with customers for this business.
+                                Include information about your business style, policies, and specific responses you want.
+                            </div>
+                        </div>
+                        
+                        <!-- Owner Information (Read-only) -->
+                        <div class="mb-3">
+                            <label class="form-label">Business Owner</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" 
+                                       value="{{ business.vendor.name }} ({{ business.vendor.email }})" 
+                                       readonly>
+                                <a href="{{ url_for('admin.vendor_detail', vendor_id=business.vendor.id) }}" 
+                                   class="btn btn-outline-secondary">View Vendor</a>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('admin.business_detail', business_id=business.id) }}" 
+                               class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Update Business
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle password visibility for WhatsApp token
+document.addEventListener('DOMContentLoaded', function() {
+    const tokenInput = document.getElementById('whatsapp_api_token');
+    
+    // Add toggle button
+    const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'btn btn-outline-secondary btn-sm mt-1';
+    toggleBtn.innerHTML = '<i class="fas fa-eye"></i> Show Token';
+    toggleBtn.onclick = function() {
+        if (tokenInput.type === 'password') {
+            tokenInput.type = 'text';
+            toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i> Hide Token';
+        } else {
+            tokenInput.type = 'password';
+            toggleBtn.innerHTML = '<i class="fas fa-eye"></i> Show Token';
+        }
+    };
+    
+    tokenInput.parentNode.appendChild(toggleBtn);
+});
+</script>
+{% endblock %}

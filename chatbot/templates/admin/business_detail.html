@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}{{ business.name }} - Business Detail - Admin - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary fw-bold">{{ business.name }}</h1>
+                    <p class="text-muted">Business details and management</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.edit_business', business_id=business.id) }}" class="btn btn-warning me-2">
+                        <i class="fas fa-edit me-2"></i>Edit Business
+                    </a>
+                    <a href="{{ url_for('admin.businesses') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Businesses
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Business Info and Statistics -->
+    <div class="row mb-4">
+        <!-- Business Information -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Business Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Status</label>
+                        <div>
+                            <span class="badge 
+                                {% if business.is_active %}bg-success
+                                {% else %}bg-danger{% endif %} fs-6">
+                                {% if business.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Owner</label>
+                        <p class="mb-0">
+                            <a href="{{ url_for('admin.vendor_detail', vendor_id=business.vendor.id) }}" 
+                               class="text-decoration-none">
+                                {{ business.vendor.name or 'N/A' }}
+                            </a>
+                        </p>
+                        <small class="text-muted">{{ business.vendor.email }}</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Category</label>
+                        <p class="mb-0">{{ business.category or 'Not specified' }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Email</label>
+                        <p class="mb-0">{{ business.email or 'Not provided' }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">WhatsApp Number</label>
+                        <p class="mb-0">{{ business.whatsapp_number or 'Not provided' }}</p>
+                    </div>
+                    
+                    {% if business.description %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Description</label>
+                        <p class="mb-0">{{ business.description }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">WhatsApp Integration</label>
+                        <div>
+                            <span class="badge {% if business.whatsapp_api_token %}bg-success{% else %}bg-warning{% endif %}">
+                                {% if business.whatsapp_api_token %}Configured{% else %}Not Configured{% endif %}
+                            </span>
+                            {% if business.whatsapp_phone_id %}
+                                <br><small class="text-muted">Phone ID: {{ business.whatsapp_phone_id[:10] }}...</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Created</label>
+                        <p class="mb-0">{{ business.created_at.strftime('%Y-%m-%d %H:%M') if business.created_at else 'N/A' }}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Last Updated</label>
+                        <p class="mb-0">{{ business.updated_at.strftime('%Y-%m-%d %H:%M') if business.updated_at else 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistics and Quick Actions -->
+        <div class="col-md-8">
+            <!-- Statistics Cards -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h4 class="mb-0">{{ products|length }}</h4>
+                            <small>Products</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h4 class="mb-0">{{ categories|length }}</h4>
+                            <small>Categories</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h4 class="mb-0">{{ orders|length }}</h4>
+                            <small>Recent Orders</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <h4 class="mb-0">{{ orders|selectattr('payment_status', 'equalto', 'paid')|list|length }}</h4>
+                            <small>Paid Orders</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <a href="{{ url_for('admin.products', business_id=business.id) }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-box me-2"></i>Manage Products
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <a href="{{ url_for('admin.add_product', business_id=business.id) }}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-plus me-2"></i>Add Product
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom GPT Instructions -->
+            {% if business.custom_instructions %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Custom GPT Instructions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="bg-light p-3 rounded">
+                        <pre class="mb-0" style="white-space: pre-wrap;">{{ business.custom_instructions }}</pre>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Products and Orders -->
+    <div class="row">
+        <!-- Recent Products -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Products</h5>
+                    <a href="{{ url_for('admin.products', business_id=business.id) }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if products %}
+                        <div class="list-group list-group-flush">
+                            {% for product in products[:5] %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">{{ product.name }}</h6>
+                                    <p class="mb-1 text-muted small">
+                                        KES {{ "%.2f"|format(product.price) }}
+                                        {% if product.category %}• {{ product.category.name }}{% endif %}
+                                    </p>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge 
+                                        {% if product.is_active %}bg-success
+                                        {% else %}bg-danger{% endif %}">
+                                        {% if product.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if products|length > 5 %}
+                        <div class="text-center mt-3">
+                            <small class="text-muted">Showing 5 of {{ products|length }} products</small>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-box fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No products yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Recent Orders</h5>
+                    <a href="{{ url_for('admin.orders', business_id=business.id) }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if orders %}
+                        <div class="list-group list-group-flush">
+                            {% for order in orders %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">Order #{{ order.id }}</h6>
+                                    <p class="mb-1 text-muted small">
+                                        {{ order.customer.name if order.customer else 'Unknown Customer' }}<br>
+                                        KES {{ "%.2f"|format(order.total_amount) }}
+                                    </p>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge 
+                                        {% if order.status == 'completed' %}bg-success
+                                        {% elif order.status == 'pending' %}bg-warning
+                                        {% elif order.status == 'cancelled' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ order.status.title() }}
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">{{ order.created_at.strftime('%m/%d %H:%M') }}</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-shopping-cart fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No orders yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

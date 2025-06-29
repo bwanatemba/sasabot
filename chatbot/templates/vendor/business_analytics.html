@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+
+{% block title %}{{ business.name }} - Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">📊 {{ business.name }} Analytics</h4>
+                        <small>Detailed insights for {{ days }} days</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="daysPicker" onchange="changePeriod()">
+                            <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                            <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                            <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                            <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
+                        </select>
+                        <a href="{{ url_for('vendor.analytics') }}" class="btn btn-sm btn-light">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    
+                    {% if analytics.get('success') %}
+                    
+                    <!-- Summary Metrics -->
+                    <div class="row mb-4">
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">{{ analytics.customer_analytics.total_customers }}</h3>
+                                    <p class="mb-0">Total Customers</p>
+                                    <small>+{{ analytics.customer_analytics.recent_customers }} recent</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">{{ analytics.order_analytics.total_orders }}</h3>
+                                    <p class="mb-0">Total Orders</p>
+                                    <small>{{ analytics.order_analytics.conversion_rate|round(1) }}% conversion</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">${{ "%.2f"|format(analytics.revenue_analytics.total_revenue) }}</h3>
+                                    <p class="mb-0">Total Revenue</p>
+                                    <small>+${{ "%.2f"|format(analytics.revenue_analytics.recent_revenue) }} recent</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card bg-warning text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">${{ "%.2f"|format(analytics.order_analytics.average_order_value) }}</h3>
+                                    <p class="mb-0">Avg Order Value</p>
+                                    <small>{{ analytics.chat_analytics.total_chat_sessions }} chat sessions</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Analytics -->
+                    <div class="row mb-4">
+                        
+                        <!-- Order Status Breakdown -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>📦 Order Status Breakdown</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-3">
+                                            <h4 class="text-success">{{ analytics.order_analytics.paid_orders }}</h4>
+                                            <small>Paid</small>
+                                        </div>
+                                        <div class="col-3">
+                                            <h4 class="text-warning">{{ analytics.order_analytics.pending_orders }}</h4>
+                                            <small>Pending</small>
+                                        </div>
+                                        <div class="col-3">
+                                            <h4 class="text-danger">{{ analytics.order_analytics.cancelled_orders }}</h4>
+                                            <small>Cancelled</small>
+                                        </div>
+                                        <div class="col-3">
+                                            <h4 class="text-info">{{ analytics.order_analytics.recent_orders }}</h4>
+                                            <small>Recent</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Customer Analytics -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>👥 Customer Insights</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-4">
+                                            <h4 class="text-primary">{{ analytics.customer_analytics.total_customers }}</h4>
+                                            <small>Total</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <h4 class="text-success">{{ analytics.customer_analytics.returning_customers }}</h4>
+                                            <small>Returning</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <h4 class="text-info">{{ analytics.customer_analytics.recent_customers }}</h4>
+                                            <small>New ({{ days }}d)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Best Selling Products -->
+                    {% if analytics.product_analytics.best_sellers %}
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>🏆 Best Selling Products</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Product Name</th>
+                                            <th>Total Sold</th>
+                                            <th>Revenue</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for product in analytics.product_analytics.best_sellers %}
+                                        <tr>
+                                            <td><strong>{{ product.product_name }}</strong></td>
+                                            <td><span class="badge bg-primary">{{ product.total_sold }}</span></td>
+                                            <td><strong class="text-success">${{ "%.2f"|format(product.total_revenue) }}</strong></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Daily Revenue Chart -->
+                    {% if analytics.revenue_analytics.daily_revenue %}
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>📈 Daily Revenue Trend</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="revenueChart" height="100"></canvas>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Chat Analytics -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>💬 Chat Analytics</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-lg-3 col-md-6 mb-3">
+                                    <h4 class="text-info">{{ analytics.chat_analytics.total_chat_sessions }}</h4>
+                                    <small>Total Sessions</small>
+                                </div>
+                                <div class="col-lg-3 col-md-6 mb-3">
+                                    <h4 class="text-primary">{{ analytics.chat_analytics.recent_chat_sessions }}</h4>
+                                    <small>Recent Sessions</small>
+                                </div>
+                                <div class="col-lg-3 col-md-6 mb-3">
+                                    <h4 class="text-success">{{ analytics.chat_analytics.total_messages }}</h4>
+                                    <small>Total Messages</small>
+                                </div>
+                                <div class="col-lg-3 col-md-6 mb-3">
+                                    <h4 class="text-warning">{{ analytics.chat_analytics.average_messages_per_session }}</h4>
+                                    <small>Avg Messages/Session</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Export Options -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>📊 Export Data</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-lg-3 col-md-6 mb-2">
+                                    <button onclick="exportData('orders')" class="btn btn-outline-primary w-100">
+                                        <i class="fas fa-shopping-cart"></i> Export Orders
+                                    </button>
+                                </div>
+                                <div class="col-lg-3 col-md-6 mb-2">
+                                    <button onclick="exportData('customers')" class="btn btn-outline-info w-100">
+                                        <i class="fas fa-users"></i> Export Customers
+                                    </button>
+                                </div>
+                                <div class="col-lg-3 col-md-6 mb-2">
+                                    <button onclick="exportData('products')" class="btn btn-outline-success w-100">
+                                        <i class="fas fa-box"></i> Export Products
+                                    </button>
+                                </div>
+                                <div class="col-lg-3 col-md-6 mb-2">
+                                    <button onclick="exportData('chats')" class="btn btn-outline-warning w-100">
+                                        <i class="fas fa-comments"></i> Export Chats
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% else %}
+                    <!-- Error State -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h5>Unable to Load Business Analytics</h5>
+                        <p class="text-muted">{{ analytics.get('error', 'An error occurred while loading analytics data.') }}</p>
+                        <button onclick="window.location.reload()" class="btn btn-primary">
+                            <i class="fas fa-refresh"></i> Try Again
+                        </button>
+                    </div>
+                    {% endif %}
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js for revenue chart -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+function changePeriod() {
+    const days = document.getElementById('daysPicker').value;
+    window.location.href = `{{ url_for('vendor.business_analytics', business_id=business.id) }}?days=${days}`;
+}
+
+function exportData(type) {
+    const url = `{{ url_for('vendor.export_analytics', business_id=business.id) }}?type=${type}&days={{ days }}`;
+    window.open(url);
+}
+
+// Revenue Chart
+{% if analytics.get('success') and analytics.revenue_analytics.daily_revenue %}
+const ctx = document.getElementById('revenueChart').getContext('2d');
+const revenueData = {{ analytics.revenue_analytics.daily_revenue | tojson }};
+
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: revenueData.map(item => item.date),
+        datasets: [{
+            label: 'Daily Revenue',
+            data: revenueData.map(item => item.revenue),
+            borderColor: '#0167bb',
+            backgroundColor: 'rgba(1, 103, 187, 0.1)',
+            borderWidth: 2,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return '$' + value.toFixed(2);
+                    }
+                }
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

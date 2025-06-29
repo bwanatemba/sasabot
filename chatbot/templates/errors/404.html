@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-5">
+    <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-lg-6 col-md-8 text-center">
+            <div class="card shadow-custom border-0">
+                <div class="card-body p-5">
+                    <!-- Error Icon -->
+                    <div class="mb-4">
+                        <i class="fas fa-exclamation-triangle text-warning" style="font-size: 6rem;"></i>
+                    </div>
+                    
+                    <!-- Error Message -->
+                    <h1 class="display-4 text-primary-custom mb-3">404</h1>
+                    <h2 class="h4 mb-3">Page Not Found</h2>
+                    <p class="text-muted mb-4">
+                        Sorry, the page you are looking for doesn't exist or has been moved.
+                    </p>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
+                        <a href="{{ url_for('main.index') }}" class="btn btn-primary-custom">
+                            <i class="fas fa-home me-2"></i>Go to Homepage
+                        </a>
+                        <button onclick="history.back()" class="btn btn-outline-primary-custom">
+                            <i class="fas fa-arrow-left me-2"></i>Go Back
+                        </button>
+                    </div>
+                    
+                    <!-- Help Section -->
+                    <div class="mt-5 pt-4 border-top">
+                        <h5 class="text-primary-custom mb-3">Need Help?</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-search text-secondary-custom me-3"></i>
+                                    <div>
+                                        <h6 class="mb-1">Search</h6>
+                                        <small class="text-muted">Use our search feature</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-envelope text-secondary-custom me-3"></i>
+                                    <div>
+                                        <h6 class="mb-1">Contact</h6>
+                                        <small class="text-muted">Get in touch with us</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

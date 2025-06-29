@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}Chat Sessions - {{ business.name if business else 'All Businesses' }} - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary fw-bold">
+                        Chat Sessions{% if business %} - {{ business.name }}{% endif %}
+                    </h1>
+                    <p class="text-muted">Customer chat interactions and AI responses</p>
+                </div>
+                <div>
+                    {% if business %}
+                    <a href="{{ url_for('vendor.business_detail', business_id=business.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Business
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('vendor.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ sessions.total if sessions else 0 }}</h4>
+                    <small>Total Sessions</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ sessions.items|selectattr('status', 'equalto', 'active')|list|length if sessions else 0 }}</h4>
+                    <small>Active Sessions</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ sessions.items|sum(attribute='messages')|length if sessions and sessions.items else 0 }}</h4>
+                    <small>Total Messages</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ sessions.items|selectattr('ended_at', 'none')|list|length if sessions else 0 }}</h4>
+                    <small>Ongoing Chats</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Filter by Status</label>
+                            <select class="form-select" id="status" name="status" onchange="this.form.submit()">
+                                <option value="">All Sessions</option>
+                                <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Active</option>
+                                <option value="ended" {% if request.args.get('status') == 'ended' %}selected{% endif %}>Ended</option>
+                                <option value="ongoing" {% if request.args.get('status') == 'ongoing' %}selected{% endif %}>Ongoing</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="date_from" class="form-label">From Date</label>
+                            <input type="date" class="form-control" id="date_from" name="date_from" 
+                                   value="{{ request.args.get('date_from', '') }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            {% if request.args %}
+                            <a href="{{ url_for('vendor.chat_sessions', business_id=business.id if business else None) }}" 
+                               class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-times me-2"></i>Clear Filters
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Sessions List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Chat Sessions</h5>
+                </div>
+                <div class="card-body">
+                    {% if sessions and sessions.items %}
+                        {% for session in sessions.items %}
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-comments me-2"></i>
+                                        Session #{{ session.id }}
+                                    </h6>
+                                    <small class="text-muted">
+                                        Started: {{ session.created_at.strftime('%Y-%m-%d %H:%M') if session.created_at else 'N/A' }}
+                                        {% if session.ended_at %}
+                                        | Ended: {{ session.ended_at.strftime('%Y-%m-%d %H:%M') }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div>
+                                    <span class="badge 
+                                        {% if session.status == 'active' %}bg-success
+                                        {% elif session.ended_at %}bg-secondary
+                                        {% else %}bg-warning{% endif %}">
+                                        {% if session.ended_at %}Ended
+                                        {% elif session.status == 'active' %}Active
+                                        {% else %}{{ session.status.title() if session.status else 'Unknown' }}{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Customer Information</h6>
+                                        {% if session.customer %}
+                                        <p class="mb-1"><strong>{{ session.customer.name }}</strong></p>
+                                        <p class="mb-1 text-muted">{{ session.customer.phone_number }}</p>
+                                        {% if session.customer.email %}
+                                        <p class="mb-1 text-muted">{{ session.customer.email }}</p>
+                                        {% endif %}
+                                        {% else %}
+                                        <p class="text-muted">Customer information not available</p>
+                                        {% endif %}
+                                        
+                                        {% if not business and session.business %}
+                                        <div class="mt-2">
+                                            <small class="text-muted">Business:</small><br>
+                                            <strong>{{ session.business.name }}</strong>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Session Details</h6>
+                                        <div class="mb-2">
+                                            <small class="text-muted">Messages:</small>
+                                            <strong>{{ session.messages|length if session.messages else 0 }}</strong>
+                                        </div>
+                                        
+                                        {% if session.messages %}
+                                        <div class="mb-2">
+                                            <small class="text-muted">Last Message:</small><br>
+                                            <span class="text-truncate d-block" style="max-width: 300px;">
+                                                {% set last_message = session.messages|sort(attribute='timestamp')|last %}
+                                                {{ last_message.content[:100] if last_message.content|length > 100 else last_message.content }}
+                                                {% if last_message.content|length > 100 %}...{% endif %}
+                                            </span>
+                                            <small class="text-muted">
+                                                {{ last_message.timestamp.strftime('%H:%M') if last_message.timestamp else 'N/A' }}
+                                                - {{ 'Customer' if last_message.is_from_customer else 'AI Assistant' }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if session.platform %}
+                                        <div class="mb-2">
+                                            <small class="text-muted">Platform:</small>
+                                            <span class="badge bg-light text-dark">
+                                                <i class="fab fa-{{ 'whatsapp' if session.platform == 'whatsapp' else 'globe' }} me-1"></i>
+                                                {{ session.platform.title() }}
+                                            </span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Recent Messages Preview -->
+                                {% if session.messages %}
+                                <div class="mt-3 border-top pt-3">
+                                    <h6>Recent Messages</h6>
+                                    <div class="chat-preview" style="max-height: 200px; overflow-y: auto;">
+                                        {% for message in session.messages|sort(attribute='timestamp')|reverse[:5]|reverse %}
+                                        <div class="d-flex mb-2 {% if message.is_from_customer %}justify-content-start{% else %}justify-content-end{% endif %}">
+                                            <div class="{% if message.is_from_customer %}bg-light{% else %}bg-primary text-white{% endif %} rounded p-2" 
+                                                 style="max-width: 70%;">
+                                                <small class="d-block fw-bold">
+                                                    {% if message.is_from_customer %}
+                                                        <i class="fas fa-user me-1"></i>Customer
+                                                    {% else %}
+                                                        <i class="fas fa-robot me-1"></i>AI Assistant
+                                                    {% endif %}
+                                                </small>
+                                                <span>{{ message.content }}</span>
+                                                <br><small class="{% if not message.is_from_customer %}text-white-50{% else %}text-muted{% endif %}">
+                                                    {{ message.timestamp.strftime('%H:%M') if message.timestamp else 'N/A' }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Actions -->
+                                <div class="mt-3 border-top pt-3">
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                data-session-id="{{ session.id }}"
+                                                onclick="viewFullChat(this)">
+                                            <i class="fas fa-eye me-1"></i>View Full Chat
+                                        </button>
+                                        
+                                        {% if session.customer and session.customer.phone_number %}
+                                        <button type="button" class="btn btn-sm btn-outline-success" 
+                                                onclick="contactCustomer('{{ session.customer.phone_number }}')">
+                                            <i class="fab fa-whatsapp me-1"></i>Contact Customer
+                                        </button>
+                                        {% endif %}
+                                        
+                                        {% if not session.ended_at %}
+                                        <button type="button" class="btn btn-sm btn-outline-warning" 
+                                                data-session-id="{{ session.id }}"
+                                                onclick="endSession(this)">
+                                            <i class="fas fa-stop me-1"></i>End Session
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Pagination -->
+                        {% if sessions.pages > 1 %}
+                        <nav aria-label="Chat sessions pagination" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if sessions.has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('vendor.chat_sessions', business_id=business.id if business else None, page=sessions.prev_num, **request.args) }}">Previous</a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for page_num in sessions.iter_pages() %}
+                                    {% if page_num %}
+                                        {% if page_num != sessions.page %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('vendor.chat_sessions', business_id=business.id if business else None, page=page_num, **request.args) }}">{{ page_num }}</a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ page_num }}</span>
+                                            </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if sessions.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('vendor.chat_sessions', business_id=business.id if business else None, page=sessions.next_num, **request.args) }}">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No chat sessions found</h5>
+                            <p class="text-muted">
+                                {% if request.args %}
+                                    No chat sessions match your current filters.
+                                {% else %}
+                                    No customers have started chat sessions yet.
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Full Chat Modal -->
+<div class="modal fade" id="fullChatModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Full Chat Session</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="fullChatContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewFullChat(button) {
+    const sessionId = button.dataset.sessionId;
+    
+    fetch(`/vendor/chat-sessions/${sessionId}/details`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('fullChatContent').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('fullChatModal')).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading chat details');
+        });
+}
+
+function contactCustomer(phoneNumber) {
+    if (phoneNumber) {
+        const message = encodeURIComponent('Hello! I hope you had a great experience with our service. How can I help you further?');
+        window.open(`https://wa.me/${phoneNumber.replace('+', '')}?text=${message}`, '_blank');
+    } else {
+        alert('Customer phone number not available');
+    }
+}
+
+function endSession(button) {
+    const sessionId = button.dataset.sessionId;
+    
+    if (confirm('Are you sure you want to end this chat session?')) {
+        fetch(`/vendor/chat-sessions/${sessionId}/end`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error ending session: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error ending session');
+        });
+    }
+}
+</script>
+{% endblock %}

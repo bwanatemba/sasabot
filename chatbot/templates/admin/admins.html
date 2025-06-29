@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Admins - Admin - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary fw-bold">Admin Accounts</h1>
+                    <p class="text-muted">Manage admin users</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('admin.add_admin') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-user-plus me-2"></i>Add Admin
+                    </a>
+                    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admins List -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">All Administrators</h5>
+                </div>
+                <div class="card-body">
+                    {% if admins %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                        <th>Last Login</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for admin in admins %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                    {{ admin.name[0].upper() if admin.name else 'A' }}
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0">{{ admin.name or 'N/A' }}</h6>
+                                                    {% if admin.id == current_user.id %}
+                                                        <small class="text-primary">(You)</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ admin.email }}</td>
+                                        <td>{{ admin.phone_number or 'N/A' }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if admin.is_active %}bg-success
+                                                {% else %}bg-danger{% endif %}">
+                                                {% if admin.is_active %}Active{% else %}Inactive{% endif %}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ admin.created_at.strftime('%Y-%m-%d') if admin.created_at else 'N/A' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ admin.last_login.strftime('%Y-%m-%d %H:%M') if admin.last_login else 'Never' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                {% if admin.id != current_user.id %}
+                                                    <button type="button" class="btn btn-outline-warning" 
+                                                            onclick="toggleAdminStatus({{ admin.id }}, {{ admin.is_active|lower }})"
+                                                            title="{% if admin.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                        <i class="fas fa-{% if admin.is_active %}ban{% else %}check{% endif %}"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-outline-info" 
+                                                            onclick="resetAdminPassword({{ admin.id }})"
+                                                            title="Reset Password">
+                                                        <i class="fas fa-key"></i>
+                                                    </button>
+                                                {% else %}
+                                                    <a href="{{ url_for('auth.change_password') }}" 
+                                                       class="btn btn-outline-primary" title="Change Your Password">
+                                                        <i class="fas fa-key"></i>
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-user-shield fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No admin accounts found</h5>
+                            <p class="text-muted">Add the first admin account to get started.</p>
+                            <a href="{{ url_for('admin.add_admin') }}" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i>Add Admin
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Notice -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Security Notice:</strong> Admin accounts have full access to the platform. 
+                Only add trusted users as administrators. Regularly review admin access and remove 
+                accounts that are no longer needed.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAdminStatus(adminId, currentStatus) {
+    if (confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this admin account?`)) {
+        fetch(`/admin/admins/${adminId}/toggle-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating admin status: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating admin status');
+        });
+    }
+}
+
+function resetAdminPassword(adminId) {
+    if (confirm('Are you sure you want to reset this admin\'s password? A new temporary password will be generated.')) {
+        fetch(`/admin/admins/${adminId}/reset-password`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Password reset successfully. New password: ${data.new_password}\n\nPlease share this securely with the admin.`);
+            } else {
+                alert('Error resetting password: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error resetting password');
+        });
+    }
+}
+</script>
+
+<style>
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}WhatsApp Configuration - {{ business.name }} - Vendor - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary fw-bold">WhatsApp Configuration</h1>
+                    <p class="text-muted">Configure WhatsApp Business API for {{ business.name }}</p>
+                </div>
+                <a href="{{ url_for('vendor.business_detail', business_id=business.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Business
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert {% if business.whatsapp_api_token %}alert-success{% else %}alert-warning{% endif %}">
+                <div class="d-flex align-items-center">
+                    <i class="fab fa-whatsapp fa-2x me-3"></i>
+                    <div>
+                        <h6 class="mb-1">
+                            {% if business.whatsapp_api_token %}
+                                WhatsApp Integration Active
+                            {% else %}
+                                WhatsApp Integration Not Configured
+                            {% endif %}
+                        </h6>
+                        <p class="mb-0">
+                            {% if business.whatsapp_api_token %}
+                                Your business is connected to WhatsApp Business API and can receive customer messages.
+                            {% else %}
+                                Configure your WhatsApp Business API to start receiving and responding to customer messages automatically.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Form -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">WhatsApp Business API Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-4">
+                            <label for="whatsapp_api_token" class="form-label">
+                                WhatsApp API Access Token <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                <input type="password" class="form-control" id="whatsapp_api_token" 
+                                       name="whatsapp_api_token" value="{{ business.whatsapp_api_token or '' }}"
+                                       placeholder="Enter your WhatsApp Business API token">
+                                <button type="button" class="btn btn-outline-secondary" onclick="togglePasswordVisibility('whatsapp_api_token')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Get this from your WhatsApp Business API provider (e.g., Meta, Twilio, etc.)
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="whatsapp_phone_id" class="form-label">
+                                WhatsApp Phone Number ID <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="text" class="form-control" id="whatsapp_phone_id" 
+                                       name="whatsapp_phone_id" value="{{ business.whatsapp_phone_id or '' }}"
+                                       placeholder="Enter your WhatsApp phone number ID">
+                            </div>
+                            <div class="form-text">
+                                This is the unique identifier for your WhatsApp Business phone number
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="webhook_url" class="form-label">Webhook URL (Read-only)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-link"></i></span>
+                                <input type="text" class="form-control" id="webhook_url" 
+                                       value="{{ url_for('api.whatsapp_webhook', _external=True) }}" readonly>
+                                <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('webhook_url')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                Use this URL as your webhook endpoint in your WhatsApp Business API configuration
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="verify_token" class="form-label">Webhook Verify Token (Read-only)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-shield-alt"></i></span>
+                                <input type="text" class="form-control" id="verify_token" 
+                                       value="sasabot_webhook_verify_{{ business.id }}" readonly>
+                                <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('verify_token')">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <div class="form-text">
+                                Use this token to verify your webhook with WhatsApp
+                            </div>
+                        </div>
+                        
+                        <!-- Test Configuration -->
+                        <div class="mb-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Test Configuration</h6>
+                                    <p class="card-text">
+                                        Test your WhatsApp integration to ensure it's working correctly.
+                                    </p>
+                                    <button type="button" class="btn btn-outline-primary" onclick="testWhatsAppConnection()">
+                                        <i class="fas fa-vial me-2"></i>Test Connection
+                                    </button>
+                                    <div id="testResult" class="mt-3" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('vendor.business_detail', business_id=business.id) }}" 
+                               class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Configuration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Setup Guide -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-question-circle me-2"></i>Setup Guide
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="accordion" id="setupAccordion">
+                        <!-- Step 1 -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#step1" aria-expanded="true">
+                                    Step 1: Get WhatsApp Business API
+                                </button>
+                            </h2>
+                            <div id="step1" class="accordion-collapse collapse show">
+                                <div class="accordion-body">
+                                    <p class="small">Sign up for WhatsApp Business API through:</p>
+                                    <ul class="small">
+                                        <li><strong>Meta (Facebook):</strong> Official provider</li>
+                                        <li><strong>Twilio:</strong> Third-party provider</li>
+                                        <li><strong>Other BSPs:</strong> Check certified partners</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2 -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#step2">
+                                    Step 2: Get Your Credentials
+                                </button>
+                            </h2>
+                            <div id="step2" class="accordion-collapse collapse">
+                                <div class="accordion-body">
+                                    <p class="small">From your WhatsApp Business API dashboard, get:</p>
+                                    <ul class="small">
+                                        <li><strong>Access Token:</strong> Used for API authentication</li>
+                                        <li><strong>Phone Number ID:</strong> Unique identifier for your number</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3 -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#step3">
+                                    Step 3: Configure Webhook
+                                </button>
+                            </h2>
+                            <div id="step3" class="accordion-collapse collapse">
+                                <div class="accordion-body">
+                                    <p class="small">In your WhatsApp Business API settings:</p>
+                                    <ol class="small">
+                                        <li>Set webhook URL to the provided URL above</li>
+                                        <li>Use the verify token shown above</li>
+                                        <li>Subscribe to message events</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 4 -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#step4">
+                                    Step 4: Test & Launch
+                                </button>
+                            </h2>
+                            <div id="step4" class="accordion-collapse collapse">
+                                <div class="accordion-body">
+                                    <p class="small">After configuration:</p>
+                                    <ul class="small">
+                                        <li>Test the connection using the test button</li>
+                                        <li>Send a test message to your business number</li>
+                                        <li>Verify automated responses work</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact Support -->
+            <div class="card mt-3">
+                <div class="card-body text-center">
+                    <h6 class="card-title">Need Help?</h6>
+                    <p class="card-text small">
+                        Our support team can help you set up WhatsApp Business API.
+                    </p>
+                    <a href="{{ url_for('main.contact') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-envelope me-2"></i>Contact Support
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const button = input.nextElementSibling;
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        button.innerHTML = '<i class="fas fa-eye-slash"></i>';
+    } else {
+        input.type = 'password';
+        button.innerHTML = '<i class="fas fa-eye"></i>';
+    }
+}
+
+function copyToClipboard(inputId) {
+    const input = document.getElementById(inputId);
+    input.select();
+    input.setSelectionRange(0, 99999); // For mobile devices
+    
+    navigator.clipboard.writeText(input.value).then(function() {
+        // Show success feedback
+        const button = input.nextElementSibling;
+        const originalContent = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check text-success"></i>';
+        setTimeout(() => {
+            button.innerHTML = originalContent;
+        }, 2000);
+    });
+}
+
+function testWhatsAppConnection() {
+    const token = document.getElementById('whatsapp_api_token').value;
+    const phoneId = document.getElementById('whatsapp_phone_id').value;
+    const resultDiv = document.getElementById('testResult');
+    
+    if (!token || !phoneId) {
+        resultDiv.innerHTML = '<div class="alert alert-warning">Please fill in both API token and phone number ID first.</div>';
+        resultDiv.style.display = 'block';
+        return;
+    }
+    
+    resultDiv.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Testing connection...</div>';
+    resultDiv.style.display = 'block';
+    
+    fetch('/vendor/whatsapp/test', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify({
+            token: token,
+            phone_id: phoneId,
+            business_id: {{ business.id }}
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = '<div class="alert alert-success"><i class="fas fa-check me-2"></i>Connection successful! WhatsApp API is working correctly.</div>';
+        } else {
+            resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-times me-2"></i>Connection failed: ${data.message || 'Unknown error'}</div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-times me-2"></i>Error testing connection. Please try again.</div>';
+    });
+}
+</script>
+{% endblock %}

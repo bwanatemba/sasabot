@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Vendor Dashboard - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3 col-xl-2 p-0">
+            <div class="sidebar text-white position-fixed h-100 overflow-auto" style="width: inherit;">
+                <div class="p-4">
+                    <h5 class="fw-bold mb-4">
+                        <i class="fas fa-store me-2"></i>Vendor Panel
+                    </h5>
+                    
+                    <nav class="nav flex-column">
+                        <a class="nav-link text-white active" href="{{ url_for('vendor.dashboard') }}">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                        <a class="nav-link text-white" href="{{ url_for('vendor.profile') }}">
+                            <i class="fas fa-user me-2"></i>Profile
+                        </a>
+                        <a class="nav-link text-white" href="{{ url_for('vendor.businesses') }}">
+                            <i class="fas fa-building me-2"></i>My Businesses
+                        </a>
+                        <a class="nav-link text-white" href="{{ url_for('vendor.analytics') }}">
+                            <i class="fas fa-chart-line me-2"></i>Analytics
+                        </a>
+                        <a class="nav-link text-white" href="{{ url_for('vendor.bulk_messaging') }}">
+                            <i class="fas fa-bullhorn me-2"></i>Bulk Messaging
+                        </a>
+                        
+                        <!-- Business-specific links -->
+                        {% for business in businesses %}
+                        <div class="mt-3">
+                            <h6 class="text-uppercase small opacity-75 mb-2">{{ business.name }}</h6>
+                            <a class="nav-link text-white ps-3" href="{{ url_for('vendor.business_detail', business_id=business.id) }}">
+                                <i class="fas fa-info-circle me-2"></i>Overview
+                            </a>
+                            <a class="nav-link text-white ps-3" href="{{ url_for('vendor.products', business_id=business.id) }}">
+                                <i class="fas fa-box me-2"></i>Products
+                            </a>
+                            <a class="nav-link text-white ps-3" href="{{ url_for('vendor.categories', business_id=business.id) }}">
+                                <i class="fas fa-tags me-2"></i>Categories
+                            </a>
+                            <a class="nav-link text-white ps-3" href="{{ url_for('vendor.orders', business_id=business.id) }}">
+                                <i class="fas fa-shopping-cart me-2"></i>Orders
+                            </a>
+                            <a class="nav-link text-white ps-3" href="{{ url_for('vendor.chat_sessions', business_id=business.id) }}">
+                                <i class="fas fa-comments me-2"></i>Chat Sessions
+                            </a>
+                            <a class="nav-link text-white ps-3" href="{{ url_for('vendor.business_analytics', business_id=business.id) }}">
+                                <i class="fas fa-chart-bar me-2"></i>Analytics
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </nav>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="col-lg-9 col-xl-10 ms-auto">
+            <div class="p-4">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h1 class="h3 fw-bold text-primary-custom">Dashboard Overview</h1>
+                        <p class="text-muted mb-0">Welcome back, {{ current_user.name or current_user.email }}!</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('vendor.add_business') }}" class="btn btn-primary-custom">
+                            <i class="fas fa-plus me-2"></i>Add Business
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Statistics Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card border-0 shadow-sm h-100 card-hover">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary-custom text-white rounded-3 p-3 me-3">
+                                        <i class="fas fa-building fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="fw-bold mb-0">{{ businesses|length }}</h4>
+                                        <small class="text-muted">Businesses</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card border-0 shadow-sm h-100 card-hover">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-secondary-custom text-white rounded-3 p-3 me-3">
+                                        <i class="fas fa-shopping-cart fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="fw-bold mb-0">{{ total_orders }}</h4>
+                                        <small class="text-muted">Total Orders</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card border-0 shadow-sm h-100 card-hover">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-success text-white rounded-3 p-3 me-3">
+                                        <i class="fas fa-money-bill fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="fw-bold mb-0">KSH {{ "%.2f"|format(total_revenue) }}</h4>
+                                        <small class="text-muted">Revenue</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-3 col-md-6">
+                        <div class="card border-0 shadow-sm h-100 card-hover">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-warning text-white rounded-3 p-3 me-3">
+                                        <i class="fas fa-clock fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="fw-bold mb-0">{{ pending_orders }}</h4>
+                                        <small class="text-muted">Pending Orders</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Business Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-12">
+                        <h4 class="fw-bold text-primary-custom mb-3">Your Businesses</h4>
+                        
+                        {% if businesses %}
+                        <div class="row g-4">
+                            {% for business in businesses %}
+                            <div class="col-lg-6 col-xl-4">
+                                <div class="card border-0 shadow-sm h-100 card-hover">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <h5 class="card-title fw-bold">{{ business.name }}</h5>
+                                            <span class="badge bg-{{ 'success' if business.is_active else 'secondary' }}">
+                                                {{ 'Active' if business.is_active else 'Inactive' }}
+                                            </span>
+                                        </div>
+                                        
+                                        <p class="card-text text-muted small">{{ business.description[:100] }}{% if business.description|length > 100 %}...{% endif %}</p>
+                                        
+                                        <div class="mb-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-tag me-1"></i>{{ business.category }}<br>
+                                                <i class="fab fa-whatsapp me-1"></i>{{ business.whatsapp_number }}
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="d-flex gap-2">
+                                            <a href="{{ url_for('vendor.business_detail', business_id=business.id) }}" 
+                                               class="btn btn-primary-custom btn-sm flex-fill">
+                                                <i class="fas fa-eye me-1"></i>View
+                                            </a>
+                                            <a href="{{ url_for('vendor.edit_business', business_id=business.id) }}" 
+                                               class="btn btn-outline-secondary btn-sm">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-4">
+                                <i class="fas fa-building fa-4x text-muted"></i>
+                            </div>
+                            <h5 class="text-muted mb-3">No businesses yet</h5>
+                            <p class="text-muted mb-4">Create your first business profile to get started with SasaBot.</p>
+                            <a href="{{ url_for('vendor.add_business') }}" class="btn btn-primary-custom">
+                                <i class="fas fa-plus me-2"></i>Create Your First Business
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Recent Orders -->
+                {% if recent_orders %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-0 pb-0">
+                                <h5 class="fw-bold text-primary-custom">Recent Orders</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Order #</th>
+                                                <th>Customer</th>
+                                                <th>Business</th>
+                                                <th>Amount</th>
+                                                <th>Status</th>
+                                                <th>Date</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for order in recent_orders %}
+                                            <tr>
+                                                <td><strong>{{ order.order_number }}</strong></td>
+                                                <td>{{ order.customer.phone_number }}</td>
+                                                <td>{{ order.business.name }}</td>
+                                                <td>KSH {{ "%.2f"|format(order.total_amount) }}</td>
+                                                <td>
+                                                    <span class="badge bg-{{ 'success' if order.status == 'paid' else 'warning' if order.status == 'pending' else 'info' if order.status == 'processing' else 'secondary' }}">
+                                                        {{ order.status.title() }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                                <td>
+                                                    <a href="{{ url_for('vendor.orders', business_id=order.business_id) }}" 
+                                                       class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Update active nav link based on current page
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.sidebar .nav-link');
+    
+    navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+        }
+    });
+});
+
+// Auto-refresh orders count every 30 seconds
+setInterval(function() {
+    fetch('/api/orders/count')
+        .then(response => response.json())
+        .then(data => {
+            if (data.pending_orders !== undefined) {
+                const pendingElement = document.querySelector('.fa-clock').parentElement.nextElementSibling.querySelector('h4');
+                if (pendingElement) {
+                    pendingElement.textContent = data.pending_orders;
+                }
+            }
+        })
+        .catch(error => console.log('Auto-refresh failed:', error));
+}, 30000);
+</script>
+{% endblock %}

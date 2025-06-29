@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from services import messaging_service
 import os
 import logging
@@ -7,8 +8,19 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Import database and authentication
+from database.config import create_database_config, init_database
+from services.auth.auth_manager import init_login_manager, get_user_role
+from flask_login import current_user
 
+# Import routes
+from routes.main import main_bp
+from routes.auth import auth_bp
+from routes.admin import admin_bp
+from routes.vendor import vendor_bp
+from routes.api import api_bp
+
+load_dotenv()
 
 def setup_logging():
     """
@@ -51,9 +63,77 @@ def setup_logging():
 
 logger = setup_logging()
 
-app = Flask(__name__)
+def create_app():
+    """Application factory"""
+    app = Flask(__name__)
+    
+    # Configuration
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    
+    # File upload configuration
+    app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
+    app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
+    
+    # Create upload folder if it doesn't exist
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    
+    # Enable CORS for frontend
+    CORS(app, origins=[
+        "https://*.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5000"
+    ])
+    
+    # Database configuration
+    app = create_database_config(app)
+    
+    # Initialize Flask-Login
+    init_login_manager(app)
+    
+    # Register blueprints
+    app.register_blueprint(main_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(vendor_bp)
+    app.register_blueprint(api_bp)
+    
+    # Template context processors
+    @app.context_processor
+    def inject_user_role():
+        return dict(get_user_role=get_user_role)
+    
+    @app.context_processor
+    def inject_current_user():
+        return dict(current_user=current_user)
+    
+    # Error handlers
+    @app.errorhandler(400)
+    def handle_bad_request(e):
+        return jsonify({"error": "Bad request, check your JSON payload"}), 400
 
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
+    @app.errorhandler(404)
+    def handle_not_found(e):
+        if request.path.startswith('/api/'):
+            return jsonify({"error": "Endpoint not found"}), 404
+        return "Page not found", 404
+
+    @app.errorhandler(405)
+    def handle_method_not_allowed(e):
+        return jsonify({"error": f"Method {request.method} is not allowed for this endpoint"}), 405
+
+    @app.errorhandler(500)
+    def handle_server_error(e):
+        logger.error(f"Server error: {str(e)}")
+        if request.path.startswith('/api/'):
+            return jsonify({"error": "Internal server error occurred"}), 500
+        return "Internal server error", 500
+    
+    # Initialize database
+    init_database(app)
+    
+    return app
+
+app = create_app()
 
 def require_api_key(f):
     @wraps(f)
@@ -70,22 +150,6 @@ def require_api_key(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@app.errorhandler(400)
-def handle_bad_request(e):
-    return jsonify({"error": "Bad request, check your JSON payload"}), 400
-
-@app.errorhandler(405)
-def handle_method_not_allowed(e):
-    return jsonify({"error": f"Method {request.method} is not allowed for this endpoint"}), 405
-
-@app.errorhandler(500)
-def handle_server_error(e):
-    return jsonify({"error": "Internal server error occurred"}), 500
-
-@app.route('/')
-def home():
-    return {"message": "Welcome to the API"}, 200
-
 # Handle Incoming WhatsApp Messages
 @app.route('/whatsapp/message', methods=['GET', 'POST'])
 def handle_whatsapp_webhook():
@@ -94,5 +158,5 @@ def handle_whatsapp_webhook():
     return messaging_service.process_whatsapp_message(request.json)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))
 

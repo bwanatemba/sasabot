@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Vendors - Admin - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary fw-bold">Vendors</h1>
+                    <p class="text-muted">Manage vendor accounts</p>
+                </div>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vendors Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">All Vendors</h5>
+                </div>
+                <div class="card-body">
+                    {% if vendors.items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Businesses</th>
+                                        <th>Status</th>
+                                        <th>Joined</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for vendor in vendors.items %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                    {{ vendor.name[0].upper() if vendor.name else 'V' }}
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0">{{ vendor.name or 'N/A' }}</h6>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ vendor.email }}</td>
+                                        <td>{{ vendor.phone_number or 'N/A' }}</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ vendor.businesses|length }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if vendor.is_active %}bg-success
+                                                {% else %}bg-danger{% endif %}">
+                                                {% if vendor.is_active %}Active{% else %}Inactive{% endif %}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ vendor.created_at.strftime('%Y-%m-%d') if vendor.created_at else 'N/A' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('admin.vendor_detail', vendor_id=vendor.id) }}" 
+                                                   class="btn btn-outline-primary" title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-outline-warning" 
+                                                        onclick="toggleVendorStatus({{ vendor.id }}, {{ vendor.is_active|lower }})"
+                                                        title="{% if vendor.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                    <i class="fas fa-{% if vendor.is_active %}ban{% else %}check{% endif %}"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if vendors.pages > 1 %}
+                        <nav aria-label="Vendors pagination" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if vendors.has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin.vendors', page=vendors.prev_num) }}">Previous</a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for page_num in vendors.iter_pages() %}
+                                    {% if page_num %}
+                                        {% if page_num != vendors.page %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('admin.vendors', page=page_num) }}">{{ page_num }}</a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ page_num }}</span>
+                                            </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if vendors.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin.vendors', page=vendors.next_num) }}">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No vendors found</h5>
+                            <p class="text-muted">No vendors have registered yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleVendorStatus(vendorId, currentStatus) {
+    if (confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this vendor?`)) {
+        fetch(`/admin/vendors/${vendorId}/toggle-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating vendor status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating vendor status');
+        });
+    }
+}
+</script>
+
+<style>
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+    font-weight: 600;
+}
+</style>
+{% endblock %}

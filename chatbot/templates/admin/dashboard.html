@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 text-primary fw-bold">Admin Dashboard</h1>
+            <p class="text-muted">Manage your SasaBot platform</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ total_vendors }}</h4>
+                            <p class="card-text">Total Vendors</p>
+                        </div>
+                        <i class="fas fa-users fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ total_businesses }}</h4>
+                            <p class="card-text">Total Businesses</p>
+                        </div>
+                        <i class="fas fa-building fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ total_orders }}</h4>
+                            <p class="card-text">Total Orders</p>
+                        </div>
+                        <i class="fas fa-shopping-cart fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ total_customers }}</h4>
+                            <p class="card-text">Total Customers</p>
+                        </div>
+                        <i class="fas fa-user-friends fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('admin.vendors') }}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-users me-2"></i>Manage Vendors
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('admin.businesses') }}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-building me-2"></i>Manage Businesses
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('admin.orders') }}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-shopping-cart me-2"></i>View Orders
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <a href="{{ url_for('admin.analytics') }}" class="btn btn-outline-warning w-100">
+                                <i class="fas fa-chart-bar me-2"></i>Analytics
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <!-- Recent Vendors -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Recent Vendors</h5>
+                    <a href="{{ url_for('admin.vendors') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_vendors %}
+                        <div class="list-group list-group-flush">
+                            {% for vendor in recent_vendors %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">{{ vendor.name }}</h6>
+                                    <p class="mb-1 text-muted small">{{ vendor.email }}</p>
+                                    <small class="text-muted">{{ vendor.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                                <a href="{{ url_for('admin.vendor_detail', vendor_id=vendor.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No vendors registered yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Orders -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Recent Orders</h5>
+                    <a href="{{ url_for('admin.orders') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_orders %}
+                        <div class="list-group list-group-flush">
+                            {% for order in recent_orders %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <div>
+                                    <h6 class="mb-1">Order #{{ order.id }}</h6>
+                                    <p class="mb-1 text-muted small">{{ order.customer.name if order.customer else 'Unknown Customer' }}</p>
+                                    <small class="text-muted">KES {{ "%.2f"|format(order.total_amount) }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge 
+                                        {% if order.status == 'completed' %}bg-success
+                                        {% elif order.status == 'pending' %}bg-warning
+                                        {% elif order.status == 'cancelled' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ order.status.title() }}
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">{{ order.created_at.strftime('%m/%d %H:%M') }}</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No orders placed yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

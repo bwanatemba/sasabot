@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Categories - {{ business.name }} - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary fw-bold">Categories - {{ business.name }}</h1>
+                    <p class="text-muted">Organize your products with categories</p>
+                </div>
+                <a href="{{ url_for('vendor.business_detail', business_id=business.id) }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Business
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Category -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Add New Category</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="row g-3">
+                        <input type="hidden" name="action" value="add">
+                        <div class="col-md-4">
+                            <label for="name" class="form-label">Category Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="description" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="description" name="description" 
+                                   placeholder="Brief description of this category">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-plus me-2"></i>Add Category
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories List -->
+    <div class="row">
+        {% if categories %}
+            {% for category in categories %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0">{{ category.name }}</h6>
+                        <span class="badge bg-primary">{{ category.products|length }} products</span>
+                    </div>
+                    <div class="card-body">
+                        {% if category.description %}
+                        <p class="card-text text-muted">{{ category.description }}</p>
+                        {% else %}
+                        <p class="card-text text-muted">No description provided</p>
+                        {% endif %}
+                        
+                        <!-- Category Products -->
+                        {% if category.products %}
+                        <div class="mb-3">
+                            <small class="text-muted">Products in this category:</small>
+                            <div class="mt-1">
+                                {% for product in category.products[:3] %}
+                                <span class="badge bg-light text-dark me-1 mb-1">{{ product.name }}</span>
+                                {% endfor %}
+                                {% if category.products|length > 3 %}
+                                <span class="badge bg-secondary">+{{ category.products|length - 3 }} more</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <small class="text-muted">
+                            Created: {{ category.created_at.strftime('%Y-%m-%d') if category.created_at else 'N/A' }}
+                        </small>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button type="button" class="btn btn-sm btn-outline-warning" 
+                                    onclick="editCategory({{ category.id }}, '{{ category.name }}', '{{ category.description or '' }}')">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <div>
+                                <a href="{{ url_for('vendor.products', business_id=business.id, category=category.id) }}" 
+                                   class="btn btn-sm btn-outline-info me-1">
+                                    <i class="fas fa-eye"></i> View Products
+                                </a>
+                                {% if category.products|length == 0 %}
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteCategory({{ category.id }}, '{{ category.name }}')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                        title="Cannot delete category with products" disabled>
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No categories yet</h5>
+                        <p class="text-muted">Create categories to organize your products better.</p>
+                        <small class="text-muted">
+                            Categories help customers find products more easily and make your business look more organized.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Edit Category Modal -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="action" value="edit">
+                <input type="hidden" name="category_id" id="editCategoryId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editCategoryName" class="form-label">Category Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="editCategoryName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCategoryDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editCategoryDescription" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Update Category
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function editCategory(categoryId, name, description) {
+    document.getElementById('editCategoryId').value = categoryId;
+    document.getElementById('editCategoryName').value = name;
+    document.getElementById('editCategoryDescription').value = description;
+    
+    new bootstrap.Modal(document.getElementById('editCategoryModal')).show();
+}
+
+function deleteCategory(categoryId, categoryName) {
+    if (confirm(`Are you sure you want to delete the category "${categoryName}"?`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = `
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="category_id" value="${categoryId}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const nameInput = form.querySelector('input[name="name"]');
+            if (nameInput && !nameInput.value.trim()) {
+                e.preventDefault();
+                alert('Please enter a category name');
+                nameInput.focus();
+                return;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

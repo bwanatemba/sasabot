@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+
+{% block title %}System Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">📊 System Analytics</h4>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="daysPicker" onchange="changePeriod()">
+                            <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                            <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                            <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+                            <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    
+                    {% if analytics.get('success') %}
+                    <!-- System Overview -->
+                    <div class="row mb-4">
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-gradient-primary text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">{{ analytics.summary.total_vendors }}</h3>
+                                    <p class="mb-0 small">Vendors</p>
+                                    <small>+{{ analytics.summary.recent_vendors }} recent</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-gradient-info text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">{{ analytics.summary.total_businesses }}</h3>
+                                    <p class="mb-0 small">Businesses</p>
+                                    <small>+{{ analytics.summary.recent_businesses }} recent</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-gradient-success text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">{{ analytics.summary.total_customers }}</h3>
+                                    <p class="mb-0 small">Customers</p>
+                                    <small>+{{ analytics.summary.recent_customers }} recent</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-gradient-warning text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">{{ analytics.summary.total_orders }}</h3>
+                                    <p class="mb-0 small">Orders</p>
+                                    <small>+{{ analytics.summary.recent_orders }} recent</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-gradient-danger text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">${{ "%.2f"|format(analytics.summary.total_revenue) }}</h3>
+                                    <p class="mb-0 small">Revenue</p>
+                                    <small>+${{ "%.2f"|format(analytics.summary.recent_revenue) }} recent</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <div class="card bg-gradient-dark text-white">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">{{ analytics.summary.total_chat_sessions }}</h3>
+                                    <p class="mb-0 small">Chat Sessions</p>
+                                    <small>+{{ analytics.summary.recent_chat_sessions }} recent</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Status Breakdown -->
+                    <div class="row mb-4">
+                        <div class="col-lg-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>📊 Order Status Breakdown</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-md-3 col-6 mb-3">
+                                            <h4 class="text-success">{{ analytics.summary.paid_orders }}</h4>
+                                            <small>Paid Orders</small>
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-3">
+                                            <h4 class="text-warning">{{ analytics.summary.total_orders - analytics.summary.paid_orders }}</h4>
+                                            <small>Pending</small>
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-3">
+                                            <h4 class="text-info">{{ analytics.summary.recent_orders }}</h4>
+                                            <small>Recent ({{ days }}d)</small>
+                                        </div>
+                                        <div class="col-md-3 col-6 mb-3">
+                                            <h4 class="text-primary">{{ "%.1f"|format((analytics.summary.paid_orders / analytics.summary.total_orders * 100) if analytics.summary.total_orders > 0 else 0) }}%</h4>
+                                            <small>Success Rate</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>💰 Revenue Insights</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <small class="text-muted">Total Revenue</small>
+                                        <h4 class="text-success">${{ "%.2f"|format(analytics.summary.total_revenue) }}</h4>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted">Recent Revenue ({{ days }}d)</small>
+                                        <h5 class="text-info">${{ "%.2f"|format(analytics.summary.recent_revenue) }}</h5>
+                                    </div>
+                                    <div class="mb-3">
+                                        <small class="text-muted">Avg Revenue per Business</small>
+                                        <h6>${{ "%.2f"|format(analytics.summary.total_revenue / analytics.summary.total_businesses if analytics.summary.total_businesses > 0 else 0) }}</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Performing Businesses -->
+                    {% if analytics.top_businesses %}
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5>🏆 Top Performing Businesses</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Business Name</th>
+                                            <th>Orders</th>
+                                            <th>Revenue</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for business in analytics.top_businesses %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ business.business_name }}</strong>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ business.order_count }}</span>
+                                            </td>
+                                            <td>
+                                                <strong class="text-success">${{ "%.2f"|format(business.revenue) }}</strong>
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('admin.business_detail', business_id=business.business_id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                                <a href="{{ url_for('admin.business_analytics', business_id=business.business_id) }}" 
+                                                   class="btn btn-sm btn-outline-info">
+                                                    <i class="fas fa-chart-line"></i> Analytics
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Quick Actions -->
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>🚀 Quick Actions</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <a href="{{ url_for('admin.bulk_messaging') }}" class="btn btn-primary">
+                                            <i class="fas fa-bullhorn"></i> Bulk Messaging
+                                        </a>
+                                        <a href="{{ url_for('admin.system_reports') }}" class="btn btn-info">
+                                            <i class="fas fa-file-alt"></i> System Reports
+                                        </a>
+                                        <a href="{{ url_for('admin.vendors') }}" class="btn btn-success">
+                                            <i class="fas fa-users"></i> Manage Vendors
+                                        </a>
+                                        <a href="{{ url_for('admin.businesses') }}" class="btn btn-warning">
+                                            <i class="fas fa-building"></i> Manage Businesses
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5>📊 Export Options</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted small mb-3">Export system data for analysis</p>
+                                    <div class="d-grid gap-2">
+                                        <button onclick="exportSystemData('vendors')" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-download"></i> Export Vendors
+                                        </button>
+                                        <button onclick="exportSystemData('businesses')" class="btn btn-outline-info btn-sm">
+                                            <i class="fas fa-download"></i> Export Businesses
+                                        </button>
+                                        <button onclick="exportSystemData('orders')" class="btn btn-outline-success btn-sm">
+                                            <i class="fas fa-download"></i> Export Orders
+                                        </button>
+                                        <button onclick="exportSystemData('customers')" class="btn btn-outline-warning btn-sm">
+                                            <i class="fas fa-download"></i> Export Customers
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% else %}
+                    <!-- Error State -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h5>Unable to Load System Analytics</h5>
+                        <p class="text-muted">{{ analytics.get('error', 'An error occurred while loading analytics data.') }}</p>
+                        <button onclick="window.location.reload()" class="btn btn-primary">
+                            <i class="fas fa-refresh"></i> Try Again
+                        </button>
+                    </div>
+                    {% endif %}
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function changePeriod() {
+    const days = document.getElementById('daysPicker').value;
+    window.location.href = `{{ url_for('admin.analytics') }}?days=${days}`;
+}
+
+function exportSystemData(type) {
+    const url = `{{ url_for('admin.export_analytics') }}?type=${type}&days={{ days }}`;
+    window.open(url);
+}
+</script>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #0167bb, #0056a3);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #58a15c, #4a8c4f);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+}
+
+.bg-gradient-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+.bg-gradient-dark {
+    background: linear-gradient(135deg, #343a40, #23272b);
+}
+</style>
+{% endblock %}
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">KES {{ "%.2f"|format(total_revenue) }}</h4>
+                            <p class="card-text">Total Revenue</p>
+                        </div>
+                        <i class="fas fa-money-bill-wave fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ total_orders }}</h4>
+                            <p class="card-text">Paid Orders</p>
+                        </div>
+                        <i class="fas fa-shopping-cart fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">KES {{ "%.2f"|format(avg_order_value) }}</h4>
+                            <p class="card-text">Avg Order Value</p>
+                        </div>
+                        <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="card-title mb-0">{{ ((total_orders / (order_stats|sum(attribute=1) or 1)) * 100)|round(1) }}%</h4>
+                            <p class="card-text">Success Rate</p>
+                        </div>
+                        <i class="fas fa-percentage fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <!-- Order Status Distribution -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Order Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="orderStatusChart" width="400" height="200"></canvas>
+                    
+                    <!-- Status Details -->
+                    <div class="mt-3">
+                        {% for status, count in order_stats %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge 
+                                {% if status == 'completed' %}bg-success
+                                {% elif status == 'pending' %}bg-warning
+                                {% elif status == 'confirmed' %}bg-info
+                                {% elif status == 'processing' %}bg-primary
+                                {% elif status == 'cancelled' %}bg-danger
+                                {% else %}bg-secondary{% endif %} me-2">
+                                {{ status.title() }}
+                            </span>
+                            <span>{{ count }} orders</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Trends (Placeholder) -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Revenue Trends</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" width="400" height="200"></canvas>
+                    <div class="mt-3 text-center">
+                        <small class="text-muted">Revenue tracking over the last 30 days</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Tables -->
+    <div class="row">
+        <!-- Top Performing Businesses -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top Performing Businesses</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Business</th>
+                                    <th>Orders</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- This would be populated with actual data in a real implementation -->
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">
+                                        <i class="fas fa-chart-bar me-2"></i>
+                                        Data analysis in progress
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Products -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Popular Products</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Business</th>
+                                    <th>Orders</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- This would be populated with actual data in a real implementation -->
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">
+                                        <i class="fas fa-box me-2"></i>
+                                        Data analysis in progress
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Export Data</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <button class="btn btn-outline-primary w-100" onclick="exportData('orders')">
+                                <i class="fas fa-download me-2"></i>Export Orders
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button class="btn btn-outline-success w-100" onclick="exportData('businesses')">
+                                <i class="fas fa-download me-2"></i>Export Businesses
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button class="btn btn-outline-info w-100" onclick="exportData('vendors')">
+                                <i class="fas fa-download me-2"></i>Export Vendors
+                            </button>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button class="btn btn-outline-warning w-100" onclick="exportData('analytics')">
+                                <i class="fas fa-download me-2"></i>Export Analytics
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Order Status Chart
+const orderStatusCtx = document.getElementById('orderStatusChart').getContext('2d');
+const orderStatusData = {
+    labels: [{% for status, count in order_stats %}'{{ status.title() }}'{% if not loop.last %},{% endif %}{% endfor %}],
+    datasets: [{
+        data: [{% for status, count in order_stats %}{{ count }}{% if not loop.last %},{% endif %}{% endfor %}],
+        backgroundColor: [
+            '#28a745', // completed - green
+            '#ffc107', // pending - yellow
+            '#17a2b8', // confirmed - cyan
+            '#007bff', // processing - blue
+            '#dc3545', // cancelled - red
+            '#6c757d'  // other - gray
+        ],
+        borderWidth: 2,
+        borderColor: '#fff'
+    }]
+};
+
+new Chart(orderStatusCtx, {
+    type: 'doughnut',
+    data: orderStatusData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Revenue Chart (Mock data)
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+const last30Days = [];
+const revenueData = [];
+
+// Generate mock data for the last 30 days
+for (let i = 29; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    last30Days.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    revenueData.push(Math.random() * 10000); // Mock revenue data
+}
+
+new Chart(revenueCtx, {
+    type: 'line',
+    data: {
+        labels: last30Days,
+        datasets: [{
+            label: 'Daily Revenue (KES)',
+            data: revenueData,
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'KES ' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+function exportData(type) {
+    const url = `/admin/export/${type}`;
+    window.open(url, '_blank');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Import Customers{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">📤 Import Customers</h4>
+                </div>
+                <div class="card-body">
+                    
+                    <!-- Instructions -->
+                    <div class="alert alert-info">
+                        <h5><i class="fas fa-info-circle"></i> Instructions</h5>
+                        <ul class="mb-0">
+                            <li>Upload a CSV file with customer information</li>
+                            <li><strong>Required column:</strong> phone_number</li>
+                            <li><strong>Optional columns:</strong> name, email</li>
+                            <li>Phone numbers should be in international format (e.g., 254712345678)</li>
+                            <li>Duplicate phone numbers will be skipped</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Sample CSV -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6>📋 Sample CSV Format</h6>
+                        </div>
+                        <div class="card-body">
+                            <pre class="bg-light p-3">phone_number,name,email
+254712345678,John Doe,john@example.com
+254798765432,Jane Smith,jane@example.com
+254701234567,Bob Wilson,</pre>
+                            <small class="text-muted">Copy this format and add your customer data</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Upload Form -->
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="mb-3">
+                                    <label for="business_id" class="form-label">Select Business</label>
+                                    <select class="form-select" name="business_id" required>
+                                        <option value="">Choose business...</option>
+                                        {% for business in businesses %}
+                                        <option value="{{ business.id }}">{{ business.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="csv_file" class="form-label">CSV File</label>
+                                    <input type="file" class="form-control" name="csv_file" accept=".csv" required>
+                                    <div class="form-text">Select a CSV file with customer data</div>
+                                </div>
+                                
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-upload"></i> Import Customers
+                                    </button>
+                                    <a href="{{ url_for('vendor.bulk_messaging') }}" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left"></i> Back to Messaging
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="col-lg-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6><i class="fas fa-lightbulb text-warning"></i> Tips</h6>
+                                        <ul class="small mb-0">
+                                            <li>Ensure phone numbers are valid and active</li>
+                                            <li>Use international format without spaces or dashes</li>
+                                            <li>Test with a small batch first</li>
+                                            <li>Keep customer names and emails accurate</li>
+                                            <li>Respect customer privacy and consent</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

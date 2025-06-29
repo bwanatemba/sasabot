@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Add Business - Vendor - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary fw-bold">Add New Business</h1>
+                    <p class="text-muted">Create a new business profile on SasaBot</p>
+                </div>
+                <a href="{{ url_for('vendor.businesses') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Businesses
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Business Form -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Business Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <!-- Basic Information -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Business Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                    <div class="form-text">This will be displayed to your customers</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="category" class="form-label">Business Category</label>
+                                    <select class="form-select" id="category" name="category">
+                                        <option value="">Select Category</option>
+                                        <option value="Restaurant">Restaurant & Food</option>
+                                        <option value="Retail">Retail & Shopping</option>
+                                        <option value="Services">Services</option>
+                                        <option value="E-commerce">E-commerce</option>
+                                        <option value="Fashion">Fashion & Clothing</option>
+                                        <option value="Electronics">Electronics & Technology</option>
+                                        <option value="Health & Beauty">Health & Beauty</option>
+                                        <option value="Automotive">Automotive</option>
+                                        <option value="Education">Education & Training</option>
+                                        <option value="Real Estate">Real Estate</option>
+                                        <option value="Professional Services">Professional Services</option>
+                                        <option value="Entertainment">Entertainment & Events</option>
+                                        <option value="Sports & Fitness">Sports & Fitness</option>
+                                        <option value="Home & Garden">Home & Garden</option>
+                                        <option value="Travel & Tourism">Travel & Tourism</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Business Email</label>
+                                    <input type="email" class="form-control" id="email" name="email">
+                                    <div class="form-text">Primary contact email for your business</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Contact Information -->
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="whatsapp_number" class="form-label">WhatsApp Business Number</label>
+                                    <input type="tel" class="form-control" id="whatsapp_number" name="whatsapp_number" 
+                                           placeholder="+254712345678">
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Include country code. This will be used for customer communications.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="location" class="form-label">Business Location</label>
+                                    <input type="text" class="form-control" id="location" name="location" 
+                                           placeholder="City, County">
+                                    <div class="form-text">Where is your business located?</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="website" class="form-label">Website (Optional)</label>
+                                    <input type="url" class="form-control" id="website" name="website" 
+                                           placeholder="https://your-website.com">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Description -->
+                        <div class="mb-4">
+                            <label for="description" class="form-label">Business Description</label>
+                            <textarea class="form-control" id="description" name="description" 
+                                      rows="4" placeholder="Describe your business, products, and services..."></textarea>
+                            <div class="form-text">Tell customers about your business and what you offer</div>
+                        </div>
+                        
+                        <!-- Business Hours (Optional) -->
+                        <div class="mb-4">
+                            <label class="form-label">Business Hours (Optional)</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="opening_time" class="form-label small">Opening Time</label>
+                                    <input type="time" class="form-control" id="opening_time" name="opening_time">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="closing_time" class="form-label small">Closing Time</label>
+                                    <input type="time" class="form-control" id="closing_time" name="closing_time">
+                                </div>
+                            </div>
+                            <div class="form-text">Set your business operating hours</div>
+                        </div>
+                        
+                        <!-- Initial Setup Options -->
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <h6 class="card-title">Initial Setup Options</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="setup_whatsapp" 
+                                                   name="setup_whatsapp">
+                                            <label class="form-check-label" for="setup_whatsapp">
+                                                Configure WhatsApp Integration
+                                            </label>
+                                            <div class="form-text">Set up WhatsApp API after creating the business</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="add_products" 
+                                                   name="add_products" checked>
+                                            <label class="form-check-label" for="add_products">
+                                                Add Products After Creation
+                                            </label>
+                                            <div class="form-text">Go to product management after saving</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Terms Agreement -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="agree_terms" 
+                                       name="agree_terms" required>
+                                <label class="form-check-label" for="agree_terms">
+                                    I agree to SasaBot's <a href="#" target="_blank">Terms of Service</a> 
+                                    and <a href="#" target="_blank">Privacy Policy</a>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('vendor.businesses') }}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Create Business
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-question-circle me-2"></i>Need Help Getting Started?
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h6>📱 WhatsApp Setup</h6>
+                            <p class="small text-muted">
+                                Connect your WhatsApp Business account to start receiving and responding to customer messages automatically.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>🛍️ Product Catalog</h6>
+                            <p class="small text-muted">
+                                Add your products with descriptions, prices, and images to create an interactive catalog for customers.
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>🤖 AI Assistant</h6>
+                            <p class="small text-muted">
+                                Customize your AI assistant's responses to match your brand voice and business policies.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation and enhancement
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const phoneInput = document.getElementById('whatsapp_number');
+    
+    // Format phone number input
+    phoneInput.addEventListener('input', function() {
+        let value = this.value.replace(/\D/g, '');
+        if (value.length > 0 && !value.startsWith('254')) {
+            if (value.startsWith('0')) {
+                value = '254' + value.substring(1);
+            } else if (value.startsWith('7') || value.startsWith('1')) {
+                value = '254' + value;
+            }
+        }
+        if (value.length > 12) {
+            value = value.substring(0, 12);
+        }
+        this.value = value ? '+' + value : '';
+    });
+    
+    // Form submission handler
+    form.addEventListener('submit', function(e) {
+        const name = document.getElementById('name').value.trim();
+        if (name.length < 2) {
+            e.preventDefault();
+            alert('Business name must be at least 2 characters long.');
+            return;
+        }
+        
+        const agreeTerms = document.getElementById('agree_terms').checked;
+        if (!agreeTerms) {
+            e.preventDefault();
+            alert('Please agree to the Terms of Service and Privacy Policy.');
+            return;
+        }
+    });
+});
+</script>
+{% endblock %}

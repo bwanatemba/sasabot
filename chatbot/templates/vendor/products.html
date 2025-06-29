@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Products - {{ business.name }} - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary fw-bold">Products - {{ business.name }}</h1>
+                    <p class="text-muted">Manage your products and inventory</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('vendor.add_product', business_id=business.id) }}" class="btn btn-primary me-2">
+                        <i class="fas fa-plus me-2"></i>Add Product
+                    </a>
+                    <a href="{{ url_for('vendor.business_detail', business_id=business.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Business
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ products.total }}</h4>
+                    <small>Total Products</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ products.items|selectattr('is_active')|list|length }}</h4>
+                    <small>Active Products</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ categories|length }}</h4>
+                    <small>Categories</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <h4 class="mb-0">{{ products.items|selectattr('has_variations')|list|length }}</h4>
+                    <small>With Variations</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="category" class="form-label">Filter by Category</label>
+                            <select class="form-select" id="category" name="category" onchange="this.form.submit()">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.id }}" 
+                                            {% if request.args.get('category') == category.id|string %}selected{% endif %}>
+                                        {{ category.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Filter by Status</label>
+                            <select class="form-select" id="status" name="status" onchange="this.form.submit()">
+                                <option value="">All Products</option>
+                                <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Active Only</option>
+                                <option value="inactive" {% if request.args.get('status') == 'inactive' %}selected{% endif %}>Inactive Only</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <a href="{{ url_for('vendor.categories', business_id=business.id) }}" class="btn btn-outline-info me-2">
+                                <i class="fas fa-tags me-2"></i>Manage Categories
+                            </a>
+                            {% if request.args %}
+                            <a href="{{ url_for('vendor.products', business_id=business.id) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Clear Filters
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="row">
+        {% if products.items %}
+            {% for product in products.items %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100">
+                    <!-- Product Image -->
+                    <div class="card-img-top" style="height: 200px; overflow: hidden; background-color: #f8f9fa;">
+                        {% if product.image_file_id %}
+                            <img src="{{ url_for('main.serve_product_image', file_id=product.image_file_id) }}" 
+                                 alt="{{ product.name }}" 
+                                 class="img-fluid w-100 h-100" 
+                                 style="object-fit: cover;">
+                        {% elif product.image_url %}
+                            <img src="{{ product.image_url }}" 
+                                 alt="{{ product.name }}" 
+                                 class="img-fluid w-100 h-100" 
+                                 style="object-fit: cover;">
+                        {% else %}
+                            <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                                <i class="fas fa-image fa-3x"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="card-title mb-0 text-truncate">{{ product.name }}</h6>
+                        <span class="badge 
+                            {% if product.is_active %}bg-success
+                            {% else %}bg-danger{% endif %}">
+                            {% if product.is_active %}Active{% else %}Inactive{% endif %}
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong class="text-primary">KES {{ "%.2f"|format(product.price) }}</strong>
+                        </div>
+                        
+                        {% if product.category %}
+                        <div class="mb-2">
+                            <small class="text-muted">Category</small><br>
+                            <span class="badge bg-light text-dark">{{ product.category.name }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if product.description %}
+                        <div class="mb-3">
+                            <small class="text-muted">Description</small>
+                            <p class="mb-0 text-truncate">{{ product.description[:80] }}{% if product.description|length > 80 %}...{% endif %}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Product Features -->
+                        <div class="mb-3">
+                            {% if product.has_variations %}
+                                <span class="badge bg-info me-1">Has Variations</span>
+                            {% endif %}
+                            {% if product.allows_customization %}
+                                <span class="badge bg-warning me-1">Customizable</span>
+                            {% endif %}
+                            {% if not product.has_variations and not product.allows_customization %}
+                                <span class="badge bg-secondary">Standard Product</span>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Product Stats -->
+                        <div class="row text-center mb-3">
+                            <div class="col-6">
+                                <small class="text-muted">Orders</small><br>
+                                <strong>{{ product.order_items|length }}</strong>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Product ID</small><br>
+                                <strong>{{ product.product_id }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Created: {{ product.created_at.strftime('%Y-%m-%d') if product.created_at else 'N/A' }}
+                            </small>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('vendor.edit_product', product_id=product.id) }}" 
+                                   class="btn btn-outline-warning" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if product.has_variations %}
+                                <a href="{{ url_for('vendor.product_variations', product_id=product.id) }}" 
+                                   class="btn btn-outline-info" title="Variations">
+                                    <i class="fas fa-list"></i>
+                                </a>
+                                {% endif %}
+                                <button type="button" class="btn btn-outline-danger" 
+                                        onclick="toggleProductStatus({{ product.id }}, {{ product.is_active|lower }})"
+                                        title="{% if product.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                    <i class="fas fa-{% if product.is_active %}eye-slash{% else %}eye{% endif %}"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-box fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No products found</h5>
+                        <p class="text-muted">
+                            {% if request.args %}
+                                No products match your current filters.
+                            {% else %}
+                                You haven't added any products yet.
+                            {% endif %}
+                        </p>
+                        <a href="{{ url_for('vendor.add_product', business_id=business.id) }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add Your First Product
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if products.pages > 1 %}
+    <nav aria-label="Products pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if products.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('vendor.products', business_id=business.id, page=products.prev_num, **request.args) }}">Previous</a>
+                </li>
+            {% endif %}
+            
+            {% for page_num in products.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != products.page %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('vendor.products', business_id=business.id, page=page_num, **request.args) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if products.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('vendor.products', business_id=business.id, page=products.next_num, **request.args) }}">Next</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<script>
+function toggleProductStatus(productId, currentStatus) {
+    if (confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this product?`)) {
+        fetch(`/vendor/products/${productId}/toggle-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating product status: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating product status');
+        });
+    }
+}
+</script>
+{% endblock %}

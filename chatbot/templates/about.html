@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}About - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row">
+        <div class="col-12 text-center mb-5">
+            <h1 class="display-4 fw-bold text-primary-custom">About SasaBot</h1>
+            <p class="lead text-muted">Transforming businesses through AI-powered WhatsApp automation</p>
+        </div>
+    </div>
+    
+    <div class="row mb-5">
+        <div class="col-lg-6">
+            <h2 class="fw-bold text-primary-custom mb-4">Our Mission</h2>
+            <p class="text-muted mb-4">
+                SasaBot is dedicated to helping businesses leverage the power of artificial intelligence and WhatsApp automation 
+                to provide exceptional customer service, streamline operations, and drive growth. We believe that every business, 
+                regardless of size, should have access to cutting-edge technology that enhances customer experience.
+            </p>
+            <p class="text-muted">
+                Our platform enables businesses to create intelligent chatbots that can handle customer inquiries, process orders, 
+                and provide support 24/7, allowing business owners to focus on what they do best - growing their business.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <img src="https://via.placeholder.com/500x300/0167bb/ffffff?text=AI+Technology" 
+                 alt="AI Technology" 
+                 class="img-fluid rounded shadow-sm">
+        </div>
+    </div>
+    
+    <div class="row mb-5">
+        <div class="col-12">
+            <h2 class="fw-bold text-primary-custom mb-4 text-center">Key Features</h2>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="text-center">
+                <div class="bg-primary-custom text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px;">
+                    <i class="fas fa-robot fa-2x"></i>
+                </div>
+                <h5 class="fw-bold">AI-Powered Assistant</h5>
+                <p class="text-muted">Intelligent chatbot powered by GPT technology for natural conversations with customers.</p>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="text-center">
+                <div class="bg-secondary-custom text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px;">
+                    <i class="fab fa-whatsapp fa-2x"></i>
+                </div>
+                <h5 class="fw-bold">WhatsApp Integration</h5>
+                <p class="text-muted">Seamless integration with WhatsApp Business API for direct customer communication.</p>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+            <div class="text-center">
+                <div class="bg-primary-custom text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px;">
+                    <i class="fas fa-shopping-cart fa-2x"></i>
+                </div>
+                <h5 class="fw-bold">E-commerce Ready</h5>
+                <p class="text-muted">Complete product catalog management with automated ordering and payment processing.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="gradient-bg text-white rounded p-5 text-center">
+                <h3 class="fw-bold mb-3">Ready to Transform Your Business?</h3>
+                <p class="mb-4">Join thousands of businesses already using SasaBot to automate their customer interactions</p>
+                <a href="{{ url_for('main.contact') }}" class="btn btn-light btn-lg">
+                    <i class="fas fa-envelope me-2"></i>Contact Us Today
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
