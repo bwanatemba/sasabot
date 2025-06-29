@@ -1,9 +1,10 @@
 import requests
 import os
 import logging
+from datetime import datetime
 from flask import jsonify, request
 from dotenv import load_dotenv
-from models import OnboardingState, Customer
+from models import OnboardingState, Customer, Order, OrderItem, Business, Product, ProductVariation, ChatSession, ChatMessage
 from services.onboarding_service import onboarding_service
 
 load_dotenv()
@@ -204,7 +205,6 @@ def send_whatsapp_document(phone_number, document_url, filename, caption=""):
 
 def generate_order_receipt_pdf(order_id):
     """Generate PDF receipt for an order"""
-    from models import Order, OrderItem, Customer, Business
     from reportlab.lib.pagesizes import letter
     from reportlab.pdfgen import canvas
     from reportlab.lib.units import inch
@@ -212,7 +212,7 @@ def generate_order_receipt_pdf(order_id):
     import os
     
     try:
-        order = Order.query.get(order_id)
+        order = Order.objects(id=order_id).first()
         if not order:
             return None
         
@@ -328,7 +328,6 @@ def generate_order_receipt_pdf(order_id):
 
 def handle_payment_confirmation(phone_number, order_id, mpesa_transaction_id):
     """Handle successful payment confirmation"""
-    from models import Order
     
     try:
         order = Order.objects(id=order_id).first()
@@ -371,10 +370,9 @@ def handle_payment_confirmation(phone_number, order_id, mpesa_transaction_id):
 
 def handle_order_status_update(order_id, new_status):
     """Send WhatsApp notification when order status changes"""
-    from models import Order
     
     try:
-        order = Order.query.get(order_id)
+        order = Order.objects(id=order_id).first()
         if not order:
             return False
         
@@ -398,20 +396,19 @@ def handle_order_status_update(order_id, new_status):
 
 def send_bulk_message(business_id, message, customer_list=None):
     """Send bulk messages to customers"""
-    from models import Customer, ChatSession, Business
     
     try:
-        business = Business.query.get(business_id)
+        business = Business.objects(id=business_id).first()
         if not business:
             return {"error": "Business not found"}
         
         # If no customer list provided, get all customers who have chatted with this business
         if not customer_list:
-            chat_sessions = ChatSession.query.filter_by(business_id=business_id).all()
-            customer_ids = list(set([session.customer_id for session in chat_sessions]))
-            customers = Customer.query.filter(Customer.id.in_(customer_ids)).all()
+            chat_sessions = ChatSession.objects(business=business_id).all()
+            customer_ids = list(set([session.customer.id for session in chat_sessions]))
+            customers = Customer.objects(id__in=customer_ids).all()
         else:
-            customers = Customer.query.filter(Customer.phone_number.in_(customer_list)).all()
+            customers = Customer.objects(phone_number__in=customer_list).all()
         
         sent_count = 0
         failed_count = 0
@@ -436,7 +433,6 @@ def send_bulk_message(business_id, message, customer_list=None):
 
 def create_chat_session(customer_phone, business_id):
     """Create or get existing chat session"""
-    from models import Customer, ChatSession
     import uuid
     
     try:
@@ -470,7 +466,6 @@ def create_chat_session(customer_phone, business_id):
 
 def log_chat_message(session_id, sender_type, message_text, message_type='text', button_data=None):
     """Log a chat message to the database"""
-    from models import ChatMessage, ChatSession
     
     try:
         # Find the chat session
@@ -502,7 +497,7 @@ def handle_button_response(phone_number, button_id):
     """
     try:
         # Check if user is in onboarding
-        onboarding_state = OnboardingState.query.filter_by(phone_number=phone_number).first()
+        onboarding_state = OnboardingState.objects(phone_number=phone_number).first()
         if onboarding_state:
             return onboarding_service.handle_onboarding_response(phone_number, button_id=button_id)
         
@@ -582,13 +577,12 @@ def handle_button_response(phone_number, button_id):
 
 def handle_product_variations(phone_number, product_id):
     """Handle product variations display with interactive buttons"""
-    from models import ProductVariation, Product
     
-    product = Product.query.get(product_id)
+    product = Product.objects(id=product_id).first()
     if not product:
         return send_whatsapp_text_message(phone_number, "Product not found.")
     
-    variations = ProductVariation.query.filter_by(product_id=product_id, is_active=True).all()
+    variations = ProductVariation.objects(product=product_id, is_active=True).all()
     
     if not variations:
         return send_whatsapp_text_message(phone_number, "No variations available for this product.")
@@ -616,9 +610,8 @@ def handle_product_variations(phone_number, product_id):
 
 def handle_product_customization(phone_number, product_id):
     """Handle product customization"""
-    from models import Product
     
-    product = Product.query.get(product_id)
+    product = Product.objects(id=product_id).first()
     
     if not product or not product.allows_customization:
         return send_whatsapp_text_message(phone_number, "Sorry, customizations not available on this product")
@@ -689,7 +682,7 @@ def handle_user_message(data):
             # Handle text messages
             if message:
                 # Check if user is in onboarding
-                onboarding_state = OnboardingState.query.filter_by(phone_number=phone_number).first()
+                onboarding_state = OnboardingState.objects(phone_number=phone_number).first()
                 if onboarding_state:
                     response = onboarding_service.handle_onboarding_response(phone_number, message=message)
                     return jsonify({"message": "Onboarding response sent", "whatsapp_response": response}), 200
@@ -741,19 +734,17 @@ def handle_user_message(data):
 
 def handle_mpesa_payment_request(phone_number, mpesa_number):
     """Handle Mpesa payment request"""
-    from models import Order
     
     try:
         # Find the most recent pending order for this customer
-        from models import Customer
-        customer = Customer.query.filter_by(phone_number=phone_number).first()
+        customer = Customer.objects(phone_number=phone_number).first()
         if not customer:
             return send_whatsapp_text_message(phone_number, "No pending orders found. Please place an order first.")
         
-        pending_order = Order.query.filter_by(
-            customer_id=customer.id,
+        pending_order = Order.objects(
+            customer=customer.id,
             payment_status='pending'
-        ).order_by(Order.created_at.desc()).first()
+        ).order_by('-created_at').first()
         
         if not pending_order:
             return send_whatsapp_text_message(phone_number, "No pending orders found. Please place an order first.")
@@ -797,25 +788,24 @@ def is_customization_request(phone_number, message):
 
 def handle_customization_input(phone_number, customization_text):
     """Handle customization input from user"""
-    from models import Customer, Order, db
     
     try:
         # Find the customer's most recent pending order
-        customer = Customer.query.filter_by(phone_number=phone_number).first()
+        customer = Customer.objects(phone_number=phone_number).first()
         if not customer:
             return send_whatsapp_text_message(phone_number, "No orders found.")
         
-        pending_order = Order.query.filter_by(
-            customer_id=customer.id,
+        pending_order = Order.objects(
+            customer=customer.id,
             status='pending'
-        ).order_by(Order.created_at.desc()).first()
+        ).order_by('-created_at').first()
         
         if not pending_order:
             return send_whatsapp_text_message(phone_number, "No pending orders found.")
         
         # Add customization notes to the order
         pending_order.customization_notes = customization_text
-        db.session.commit()
+        pending_order.save()
         
         message = f"✅ Customization noted: {customization_text}\n\n"
         message += "Your customization has been added to your order. "
@@ -829,10 +819,9 @@ def handle_customization_input(phone_number, customization_text):
 
 def initiate_product_purchase(phone_number, product_id):
     """Initiate purchase for a product"""
-    from models import Product, Customer, Order, OrderItem, db
     
     try:
-        product = Product.query.get(product_id)
+        product = Product.objects(id=product_id).first()
         if not product or not product.is_active:
             return send_whatsapp_text_message(phone_number, "Sorry, this product is not available.")
         
@@ -841,34 +830,29 @@ def initiate_product_purchase(phone_number, product_id):
             return handle_product_variations(phone_number, product_id)
         
         # Get or create customer
-        customer = Customer.query.filter_by(phone_number=phone_number).first()
+        customer = Customer.objects(phone_number=phone_number).first()
         if not customer:
             customer = Customer(phone_number=phone_number)
-            db.session.add(customer)
-            db.session.commit()
+            customer.save()
         
-        # Create order
-        order = Order(
-            order_number=Order.generate_order_number(),
-            customer_id=customer.id,
-            business_id=product.business_id,
-            total_amount=product.price,
-            status='pending',
-            payment_status='pending'
-        )
-        db.session.add(order)
-        db.session.commit()
-        
-        # Create order item
+        # Create order with embedded order item
         order_item = OrderItem(
-            order_id=order.id,
-            product_id=product.id,
+            product=product.id,
             quantity=1,
             unit_price=product.price,
             total_price=product.price
         )
-        db.session.add(order_item)
-        db.session.commit()
+        
+        order = Order(
+            order_number=Order.generate_order_number(),
+            customer=customer.id,
+            business=product.business.id,
+            total_amount=product.price,
+            status='pending',
+            payment_status='pending',
+            order_items=[order_item]
+        )
+        order.save()
         
         # Show order confirmation with payment options
         return show_order_confirmation(phone_number, order.id)
@@ -879,45 +863,39 @@ def initiate_product_purchase(phone_number, product_id):
 
 def initiate_variation_purchase(phone_number, variation_id):
     """Initiate purchase for a product variation"""
-    from models import ProductVariation, Customer, Order, OrderItem, db
     
     try:
-        variation = ProductVariation.query.get(variation_id)
+        variation = ProductVariation.objects(id=variation_id).first()
         if not variation or not variation.is_active:
             return send_whatsapp_text_message(phone_number, "Sorry, this variation is not available.")
         
         product = variation.product
         
         # Get or create customer
-        customer = Customer.query.filter_by(phone_number=phone_number).first()
+        customer = Customer.objects(phone_number=phone_number).first()
         if not customer:
             customer = Customer(phone_number=phone_number)
-            db.session.add(customer)
-            db.session.commit()
+            customer.save()
         
-        # Create order
-        order = Order(
-            order_number=Order.generate_order_number(),
-            customer_id=customer.id,
-            business_id=product.business_id,
-            total_amount=variation.price,
-            status='pending',
-            payment_status='pending'
-        )
-        db.session.add(order)
-        db.session.commit()
-        
-        # Create order item
+        # Create order with embedded order item
         order_item = OrderItem(
-            order_id=order.id,
-            product_id=product.id,
-            variation_id=variation.id,
+            product=product.id,
+            variation_id=str(variation.id),
             quantity=1,
             unit_price=variation.price,
             total_price=variation.price
         )
-        db.session.add(order_item)
-        db.session.commit()
+        
+        order = Order(
+            order_number=Order.generate_order_number(),
+            customer=customer.id,
+            business=product.business.id,
+            total_amount=variation.price,
+            status='pending',
+            payment_status='pending',
+            order_items=[order_item]
+        )
+        order.save()
         
         # Show order confirmation with payment options
         return show_order_confirmation(phone_number, order.id)
@@ -928,10 +906,9 @@ def initiate_variation_purchase(phone_number, variation_id):
 
 def show_order_confirmation(phone_number, order_id):
     """Show order confirmation with payment options"""
-    from models import Order
     
     try:
-        order = Order.query.get(order_id)
+        order = Order.objects(id=order_id).first()
         if not order:
             return send_whatsapp_text_message(phone_number, "Order not found.")
         
@@ -974,10 +951,9 @@ def show_order_confirmation(phone_number, order_id):
 
 def confirm_order_placement(phone_number, order_id):
     """Confirm order and initiate payment"""
-    from models import Order
     
     try:
-        order = Order.query.get(order_id)
+        order = Order.objects(id=order_id).first()
         if not order:
             return send_whatsapp_text_message(phone_number, "Order not found.")
         
@@ -995,16 +971,15 @@ def confirm_order_placement(phone_number, order_id):
 
 def cancel_order(phone_number, order_id):
     """Cancel an order"""
-    from models import Order, db
     
     try:
-        order = Order.query.get(order_id)
+        order = Order.objects(id=order_id).first()
         if not order:
             return send_whatsapp_text_message(phone_number, "Order not found.")
         
         # Update order status
         order.status = 'cancelled'
-        db.session.commit()
+        order.save()
         
         message = f"❌ Order #{order.order_number} has been cancelled.\n\n"
         message += "You can start a new order anytime by typing 'hi' or 'hello'."
@@ -1017,14 +992,13 @@ def cancel_order(phone_number, order_id):
 
 def show_more_variations(phone_number, product_id, page=1):
     """Show additional product variations"""
-    from models import ProductVariation, Product
     
     try:
-        product = Product.query.get(product_id)
+        product = Product.objects(id=product_id).first()
         if not product:
             return send_whatsapp_text_message(phone_number, "Product not found.")
         
-        variations = ProductVariation.query.filter_by(product_id=product_id, is_active=True).all()
+        variations = ProductVariation.objects(product=product_id, is_active=True).all()
         
         # Calculate pagination
         per_page = 3
