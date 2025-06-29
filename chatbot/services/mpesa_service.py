@@ -3,7 +3,7 @@ import logging
 import requests
 import base64
 from datetime import datetime
-from models import db, Order, OrderItem, Customer
+from models import Order, OrderItem, Customer
 from services.messaging_service import send_whatsapp_text_message
 import secrets
 
@@ -154,12 +154,12 @@ class MpesaService:
                 if phone_number.startswith('254'):
                     phone_number = '+' + phone_number
                 
-                customer = Customer.query.filter_by(phone_number=phone_number).first()
+                customer = Customer.objects(phone_number=phone_number).first()
                 if customer:
-                    order = Order.query.filter_by(
-                        customer_id=customer.id,
+                    order = Order.objects(
+                        customer=customer,
                         payment_status='pending'
-                    ).order_by(Order.created_at.desc()).first()
+                    ).order_by('-created_at').first()
                     
                     if order:
                         order.payment_status = status
@@ -169,7 +169,7 @@ class MpesaService:
                         elif status == 'failed':
                             order.status = 'cancelled'
                         
-                        db.session.commit()
+                        order.save()
                         
                         # Send confirmation message
                         if status == 'paid':
@@ -185,52 +185,52 @@ class MpesaService:
 def create_order_and_initiate_payment(phone_number, product_id, business_id, customization_notes=None, variation_id=None):
     """Create order and initiate Mpesa payment"""
     try:
-        from models import Product, ProductVariation
+        from models import Product, ProductVariation, Business
         
         # Get customer
-        customer = Customer.query.filter_by(phone_number=phone_number).first()
+        customer = Customer.objects(phone_number=phone_number).first()
         if not customer:
             customer = Customer(phone_number=phone_number)
-            db.session.add(customer)
-            db.session.flush()
+            customer.save()
         
         # Get product
-        product = Product.query.get(product_id)
+        product = Product.objects(id=product_id).first()
         if not product:
             return {"success": False, "message": "Product not found"}
         
+        # Get business
+        business = Business.objects(id=business_id).first()
+        if not business:
+            return {"success": False, "message": "Business not found"}
+        
         # Determine price
         if variation_id:
-            variation = ProductVariation.query.get(variation_id)
-            if variation and variation.product_id == product_id:
+            variation = ProductVariation.objects(id=variation_id, product=product).first()
+            if variation:
                 unit_price = variation.price
             else:
                 unit_price = product.price
         else:
             unit_price = product.price
         
-        # Create order
-        order = Order(
-            order_number=Order.generate_order_number(),
-            customer_id=customer.id,
-            business_id=business_id,
-            total_amount=unit_price,
-            customization_notes=customization_notes
-        )
-        db.session.add(order)
-        db.session.flush()
-        
-        # Create order item
+        # Create order with embedded order items
         order_item = OrderItem(
-            order_id=order.id,
-            product_id=product_id,
-            variation_id=variation_id,
+            product=product,
+            variation_id=str(variation.id) if variation_id and ProductVariation.objects(id=variation_id, product=product).first() else None,
             quantity=1,
             unit_price=unit_price,
             total_price=unit_price
         )
-        db.session.add(order_item)
-        db.session.commit()
+        
+        order = Order(
+            order_number=Order.generate_order_number(),
+            customer=customer,
+            business=business,
+            total_amount=unit_price,
+            customization_notes=customization_notes,
+            order_items=[order_item]
+        )
+        order.save()
         
         # Initiate Mpesa payment
         mpesa_service = MpesaService()
@@ -249,7 +249,7 @@ def create_order_and_initiate_payment(phone_number, product_id, business_id, cus
         else:
             order.status = 'cancelled'
             order.payment_status = 'failed'
-            db.session.commit()
+            order.save()
             
             send_whatsapp_text_message(
                 phone_number,
@@ -260,7 +260,6 @@ def create_order_and_initiate_payment(phone_number, product_id, business_id, cus
         
     except Exception as e:
         logger.error(f"Error creating order and initiating payment: {str(e)}")
-        db.session.rollback()
         return {"success": False, "message": "Error processing order"}
 
 # Create global instance
