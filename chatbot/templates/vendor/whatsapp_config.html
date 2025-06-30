@@ -128,7 +128,7 @@
                                     <p class="card-text">
                                         Test your WhatsApp integration to ensure it's working correctly.
                                     </p>
-                                    <button type="button" class="btn btn-outline-primary" onclick="testWhatsAppConnection()">
+                                    <button type="button" class="btn btn-outline-primary" onclick="testWhatsAppConfig()">
                                         <i class="fas fa-vial me-2"></i>Test Connection
                                     </button>
                                     <div id="testResult" class="mt-3" style="display: none;"></div>
@@ -287,7 +287,7 @@ function copyToClipboard(inputId) {
     });
 }
 
-function testWhatsAppConnection() {
+function testWhatsAppConfig() {
     const token = document.getElementById('whatsapp_api_token').value;
     const phoneId = document.getElementById('whatsapp_phone_id').value;
     const resultDiv = document.getElementById('testResult');
@@ -305,12 +305,12 @@ function testWhatsAppConnection() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token() }}'
+            'X-CSRFToken': getCSRFToken()
         },
         body: JSON.stringify({
             token: token,
             phone_id: phoneId,
-            business_id: {{ business.id }}
+            business_id: "{{ business.id }}"
         })
     })
     .then(response => response.json())

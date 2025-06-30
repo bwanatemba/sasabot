@@ -578,29 +578,6 @@ function getCSRFToken() {
     return token ? token.getAttribute('content') : '';
 }
 
-// WhatsApp Integration Functions
-function testWhatsAppConnection(businessId) {
-    fetch(`/vendor/businesses/${businessId}/test-whatsapp`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showAlert('WhatsApp connection test successful!', 'success');
-        } else {
-            showAlert('WhatsApp connection test failed: ' + data.message, 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showAlert('Error testing WhatsApp connection', 'error');
-    });
-}
-
 // Analytics Functions
 function refreshAnalytics() {
     const analyticsContainer = document.querySelector('.analytics-container');

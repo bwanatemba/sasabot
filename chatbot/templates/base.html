@@ -412,6 +412,7 @@
     <!-- Custom JavaScript -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/forms.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/custom.js') }}"></script>
     
     {% if request.endpoint and ('dashboard' in request.endpoint or 'analytics' in request.endpoint) %}
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
