@@ -9,7 +9,55 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 def initialize_openai_client():
-    return OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    """Initialize OpenAI client with proper configuration"""
+    try:
+        # Get API key from environment
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set")
+        
+        # Clear any proxy-related environment variables that might interfere
+        proxy_env_vars = ['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy']
+        original_proxy_values = {}
+        for var in proxy_env_vars:
+            if var in os.environ:
+                original_proxy_values[var] = os.environ[var]
+                logger.debug(f"Temporarily clearing {var}={os.environ[var]}")
+                del os.environ[var]
+        
+        try:
+            # Create client with explicit parameters to avoid unexpected kwargs
+            client_kwargs = {
+                'api_key': api_key
+            }
+            
+            # Explicitly set base_url if needed (optional)
+            base_url = os.getenv('OPENAI_BASE_URL')
+            if base_url:
+                client_kwargs['base_url'] = base_url
+            
+            # Initialize client with controlled parameters
+            try:
+                client = OpenAI(**client_kwargs)
+                logger.info("OpenAI client initialized successfully")
+                return client
+            except TypeError as te:
+                # Handle case where unexpected parameters are being passed
+                logger.warning(f"TypeError during OpenAI client initialization: {str(te)}")
+                # Fallback to minimal initialization
+                client = OpenAI(api_key=api_key)
+                logger.info("OpenAI client initialized with fallback method")
+                return client
+                
+        finally:
+            # Restore original proxy environment variables
+            for var, value in original_proxy_values.items():
+                os.environ[var] = value
+                logger.debug(f"Restored {var}={value}")
+            
+    except Exception as e:
+        logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+        raise
 
 def process_gpt_interaction(phone_number, message, business_id=None):
     """Process GPT interaction with business context"""

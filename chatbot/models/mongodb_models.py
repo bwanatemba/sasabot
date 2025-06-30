@@ -104,7 +104,7 @@ class Product(Document):
         elif self.image_url:
             return self.image_url
         else:
-            return '/static/images/no-image-placeholder.svg'
+            return '/static/images/default-image.jpg'
     
     def has_image(self):
         """Check if product has an image."""
