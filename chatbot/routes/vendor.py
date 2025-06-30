@@ -619,7 +619,7 @@ def delete_product_image(product_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
-@vendor_bp.route('/categories/<business_id>')
+@vendor_bp.route('/categories/<business_id>', methods=['GET', 'POST'])
 @vendor_required
 def categories(business_id):
     try:
@@ -633,6 +633,49 @@ def categories(business_id):
         if get_user_role(current_user) != 'admin' and business.vendor != current_user:
             flash('Access denied.', 'error')
             return redirect(url_for('vendor.businesses'))
+        
+        if request.method == 'POST':
+            action = request.form.get('action')
+            
+            if action == 'add':
+                # Create new category
+                category = Category(
+                    name=request.form.get('name'),
+                    description=request.form.get('description'),
+                    business=business
+                )
+                category.save()
+                flash('Category added successfully!', 'success')
+                return redirect(url_for('vendor.categories', business_id=business_id))
+            
+            elif action == 'edit':
+                # Edit existing category
+                category_id = request.form.get('category_id')
+                category = Category.objects(id=ObjectId(category_id)).first()
+                if category and category.business == business:
+                    category.name = request.form.get('name')
+                    category.description = request.form.get('description')
+                    category.save()
+                    flash('Category updated successfully!', 'success')
+                else:
+                    flash('Category not found or access denied.', 'error')
+                return redirect(url_for('vendor.categories', business_id=business_id))
+            
+            elif action == 'delete':
+                # Delete category
+                category_id = request.form.get('category_id')
+                category = Category.objects(id=ObjectId(category_id)).first()
+                if category and category.business == business:
+                    # Check if category has products
+                    products_count = Product.objects(category=category).count()
+                    if products_count == 0:
+                        category.delete()
+                        flash('Category deleted successfully!', 'success')
+                    else:
+                        flash('Cannot delete category that has products assigned.', 'error')
+                else:
+                    flash('Category not found or access denied.', 'error')
+                return redirect(url_for('vendor.categories', business_id=business_id))
         
         categories = Category.objects(business=business)
         

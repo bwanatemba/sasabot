@@ -28,6 +28,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" class="row g-3">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="add">
                         <div class="col-md-4">
                             <label for="name" class="form-label">Category Name <span class="text-danger">*</span></label>
@@ -139,6 +140,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <input type="hidden" name="action" value="edit">
                 <input type="hidden" name="category_id" id="editCategoryId">
                 <div class="modal-body">

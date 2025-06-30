@@ -424,3 +424,45 @@ def system_reports():
     except Exception as e:
         flash(f"Error generating reports: {str(e)}", 'error')
         return redirect(url_for('admin.dashboard'))
+
+@admin_bp.route('/categories/create', methods=['POST'])
+@admin_required
+def create_category():
+    try:
+        data = request.get_json()
+        business_id = data.get('business_id')
+        name = data.get('name')
+        description = data.get('description')
+        
+        if not business_id or not name:
+            return jsonify({'success': False, 'message': 'Business ID and category name are required'})
+        
+        business = Business.objects(id=ObjectId(business_id)).first()
+        if not business:
+            return jsonify({'success': False, 'message': 'Business not found'})
+        
+        # Check if category already exists
+        existing_category = Category.objects(business=business, name=name).first()
+        if existing_category:
+            return jsonify({'success': False, 'message': 'Category with this name already exists'})
+        
+        # Create new category
+        category = Category(
+            name=name,
+            description=description,
+            business=business
+        )
+        category.save()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Category created successfully',
+            'category': {
+                'id': str(category.id),
+                'name': category.name,
+                'description': category.description
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
