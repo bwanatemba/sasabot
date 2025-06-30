@@ -11,6 +11,7 @@ from mongoengine.queryset.visitor import Q
 import csv
 import io
 import os
+import random
 import secrets
 import string
 import logging
@@ -912,6 +913,102 @@ def export_data(business_id):
             as_attachment=True,
             download_name=f'{business.name}_orders_export.csv'
         )
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('vendor.businesses'))
+
+@vendor_bp.route('/products/<product_id>/variations', methods=['GET', 'POST'])
+@vendor_required
+def product_variations(product_id):
+    try:
+        product = Product.objects(id=ObjectId(product_id)).first()
+        
+        if not product:
+            flash('Product not found.', 'error')
+            return redirect(url_for('vendor.businesses'))
+        
+        # Check if vendor owns this product's business or is admin
+        if get_user_role(current_user) != 'admin' and product.business.vendor != current_user:
+            flash('Access denied.', 'error')
+            return redirect(url_for('vendor.businesses'))
+        
+        if request.method == 'POST':
+            action = request.form.get('action')
+            
+            if action == 'add_variation':
+                # Add new variation
+                variation_name = request.form.get('variation_name', '').strip()
+                variation_price = request.form.get('variation_price', '').strip()
+                variation_description = request.form.get('variation_description', '').strip()
+                
+                if not variation_name or not variation_price:
+                    flash('Variation name and price are required.', 'error')
+                    return redirect(url_for('vendor.product_variations', product_id=product_id))
+                
+                try:
+                    price = float(variation_price)
+                    if price < 0:
+                        flash('Price must be a positive number.', 'error')
+                        return redirect(url_for('vendor.product_variations', product_id=product_id))
+                except ValueError:
+                    flash('Invalid price format.', 'error')
+                    return redirect(url_for('vendor.product_variations', product_id=product_id))
+                
+                # Generate variation ID
+                variation_id = f"VAR{random.randint(100000, 999999)}"
+                while any(v.variation_id == variation_id for v in product.variations):
+                    variation_id = f"VAR{random.randint(100000, 999999)}"
+                
+                # Create new variation
+                new_variation = ProductVariation(
+                    variation_id=variation_id,
+                    name=variation_name,
+                    price=price,
+                    description=variation_description
+                )
+                
+                # Add to product
+                product.variations.append(new_variation)
+                product.has_variations = True
+                product.save()
+                
+                flash('Variation added successfully!', 'success')
+                return redirect(url_for('vendor.product_variations', product_id=product_id))
+            
+            elif action == 'delete_variation':
+                variation_id = request.form.get('variation_id')
+                if variation_id:
+                    # Find and remove variation
+                    product.variations = [v for v in product.variations if v.variation_id != variation_id]
+                    
+                    # Update has_variations flag
+                    product.has_variations = len(product.variations) > 0
+                    product.save()
+                    
+                    flash('Variation deleted successfully!', 'success')
+                else:
+                    flash('Variation not found.', 'error')
+                
+                return redirect(url_for('vendor.product_variations', product_id=product_id))
+            
+            elif action == 'toggle_variation':
+                variation_id = request.form.get('variation_id')
+                if variation_id:
+                    # Find and toggle variation status
+                    for variation in product.variations:
+                        if variation.variation_id == variation_id:
+                            variation.is_active = not variation.is_active
+                            break
+                    
+                    product.save()
+                    flash('Variation status updated!', 'success')
+                else:
+                    flash('Variation not found.', 'error')
+                
+                return redirect(url_for('vendor.product_variations', product_id=product_id))
+        
+        return render_template('vendor/product_variations.html', product=product)
+        
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('vendor.businesses'))
