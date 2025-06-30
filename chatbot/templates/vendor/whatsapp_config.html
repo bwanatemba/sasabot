@@ -55,6 +55,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-4">
                             <label for="whatsapp_api_token" class="form-label">
                                 WhatsApp API Access Token <span class="text-danger">*</span>

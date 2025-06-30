@@ -345,6 +345,56 @@ def whatsapp_config(business_id):
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('vendor.businesses'))
 
+@vendor_bp.route('/whatsapp/test', methods=['POST'])
+@vendor_required
+def test_whatsapp_connection():
+    """Test WhatsApp API connection"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'message': 'No data provided'}), 400
+            
+        token = data.get('token')
+        phone_id = data.get('phone_id')
+        business_id = data.get('business_id')
+        
+        if not token or not phone_id:
+            return jsonify({'success': False, 'message': 'API token and phone ID are required'}), 400
+        
+        # Import requests for API testing
+        import requests
+        
+        # Test the WhatsApp API connection
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Make a simple API call to verify credentials
+        url = f'https://graph.facebook.com/v18.0/{phone_id}'
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            return jsonify({'success': True, 'message': 'Connection successful'})
+        else:
+            error_msg = 'Invalid credentials or phone ID'
+            try:
+                error_data = response.json()
+                if 'error' in error_data and 'message' in error_data['error']:
+                    error_msg = error_data['error']['message']
+            except:
+                pass
+            return jsonify({'success': False, 'message': error_msg})
+            
+    except requests.exceptions.Timeout:
+        return jsonify({'success': False, 'message': 'Connection timeout. Please try again.'})
+    except requests.exceptions.RequestException as e:
+        return jsonify({'success': False, 'message': f'Connection error: {str(e)}'})
+    except Exception as e:
+        logging.getLogger(__name__).error(f"WhatsApp test error: {e}")
+        return jsonify({'success': False, 'message': 'An error occurred while testing the connection'})
+
 @vendor_bp.route('/products/<business_id>')
 @vendor_required
 def products(business_id):

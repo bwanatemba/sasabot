@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
+from flask_wtf.csrf import CSRFProtect
 from services import messaging_service
 import os
 import logging
@@ -69,6 +70,9 @@ def create_app():
     
     # Configuration
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    
+    # Initialize CSRF Protection
+    csrf = CSRFProtect(app)
     
     # File upload configuration
     app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
@@ -171,6 +175,14 @@ def create_app():
     # Initialize database
     init_database(app)
     
+    # Handle Incoming WhatsApp Messages (exempt from CSRF)
+    @app.route('/whatsapp/message', methods=['GET', 'POST'])
+    @csrf.exempt
+    def handle_whatsapp_webhook():
+        if request.method == 'GET':
+            return messaging_service.verify_webhook()
+        return messaging_service.process_whatsapp_message(request.json)
+    
     return app
 
 app = create_app()
@@ -189,13 +201,6 @@ def require_api_key(f):
         
         return f(*args, **kwargs)
     return decorated_function
-
-# Handle Incoming WhatsApp Messages
-@app.route('/whatsapp/message', methods=['GET', 'POST'])
-def handle_whatsapp_webhook():
-    if request.method == 'GET':
-        return messaging_service.verify_webhook()
-    return messaging_service.process_whatsapp_message(request.json)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.getenv('PORT', 5000)))

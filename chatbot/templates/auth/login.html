@@ -18,6 +18,7 @@
                         </div>
                         
                         <form method="POST" action="{{ url_for('auth.login') }}" onsubmit="return validateForm('loginForm');" id="loginForm">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <div class="mb-3">
                                 <label for="email_or_phone" class="form-label fw-semibold">Email or Phone Number</label>
                                 <div class="input-group">
