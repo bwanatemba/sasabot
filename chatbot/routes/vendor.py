@@ -413,13 +413,17 @@ def products(business_id):
         # Get pagination parameters
         page = request.args.get('page', 1, type=int)
         per_page = 10  # Number of products per page
+        skip = (page - 1) * per_page
         
-        # Get paginated products
-        products = Product.objects(business=business).paginate(
-            page=page, 
-            per_page=per_page,
-            error_out=False
-        )
+        # Get paginated products using MongoEngine skip/limit
+        products_query = Product.objects(business=business)
+        total = products_query.count()
+        products_list = products_query.skip(skip).limit(per_page)
+        
+        # Create pagination object
+        from services.pagination import Pagination
+        products = Pagination(page, per_page, total, products_list)
+        
         categories = Category.objects(business=business)
         
         return render_template('vendor/products.html',
@@ -684,13 +688,24 @@ def orders(business_id):
             flash('Access denied.', 'error')
             return redirect(url_for('vendor.businesses'))
         
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        skip = (page - 1) * per_page
+        
         status_filter = request.args.get('status')
         orders_query = Order.objects(business=business)
         
         if status_filter:
             orders_query = orders_query.filter(status=status_filter)
         
-        orders = orders_query.order_by('-created_at')
+        # Get paginated orders
+        total = orders_query.count()
+        orders_list = orders_query.order_by('-created_at').skip(skip).limit(per_page)
+        
+        # Create pagination object
+        from services.pagination import Pagination
+        orders = Pagination(page, per_page, total, orders_list)
         
         return render_template('vendor/orders.html',
                              business=business,
@@ -750,7 +765,19 @@ def chat_sessions(business_id):
             flash('Access denied.', 'error')
             return redirect(url_for('vendor.businesses'))
         
-        sessions = ChatSession.objects(business=business).order_by('-created_at')
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        skip = (page - 1) * per_page
+        
+        # Get paginated sessions
+        sessions_query = ChatSession.objects(business=business)
+        total = sessions_query.count()
+        sessions_list = sessions_query.order_by('-created_at').skip(skip).limit(per_page)
+        
+        # Create pagination object
+        from services.pagination import Pagination
+        sessions = Pagination(page, per_page, total, sessions_list)
         
         return render_template('vendor/chat_sessions.html',
                              business=business,

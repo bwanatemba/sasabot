@@ -43,24 +43,11 @@ def vendors():
     vendors_list = Vendor.objects.skip(skip).limit(per_page)
     total = Vendor.objects.count()
     
-    # Create pagination info
-    has_prev = page > 1
-    has_next = skip + per_page < total
-    prev_num = page - 1 if has_prev else None
-    next_num = page + 1 if has_next else None
+    # Create pagination object with iter_pages support
+    from services.pagination import Pagination
+    vendors = Pagination(page, per_page, total, vendors_list)
     
-    pagination = {
-        'items': vendors_list,
-        'has_prev': has_prev,
-        'has_next': has_next,
-        'prev_num': prev_num,
-        'next_num': next_num,
-        'page': page,
-        'pages': (total + per_page - 1) // per_page,
-        'total': total
-    }
-    
-    return render_template('admin/vendors.html', vendors=pagination)
+    return render_template('admin/vendors.html', vendors=vendors)
 
 @admin_bp.route('/vendors/<vendor_id>')
 @admin_required
@@ -87,24 +74,11 @@ def businesses():
     businesses_list = Business.objects.skip(skip).limit(per_page)
     total = Business.objects.count()
     
-    # Create pagination info
-    has_prev = page > 1
-    has_next = skip + per_page < total
-    prev_num = page - 1 if has_prev else None
-    next_num = page + 1 if has_next else None
+    # Create pagination object with iter_pages support
+    from services.pagination import Pagination
+    businesses = Pagination(page, per_page, total, businesses_list)
     
-    pagination = {
-        'items': businesses_list,
-        'has_prev': has_prev,
-        'has_next': has_next,
-        'prev_num': prev_num,
-        'next_num': next_num,
-        'page': page,
-        'pages': (total + per_page - 1) // per_page,
-        'total': total
-    }
-    
-    return render_template('admin/businesses.html', businesses=pagination)
+    return render_template('admin/businesses.html', businesses=businesses)
 
 @admin_bp.route('/businesses/<business_id>')
 @admin_required
@@ -170,24 +144,11 @@ def orders():
     orders_list = query.order_by('-created_at').skip(skip).limit(per_page)
     total = query.count()
     
-    # Create pagination info
-    has_prev = page > 1
-    has_next = skip + per_page < total
-    prev_num = page - 1 if has_prev else None
-    next_num = page + 1 if has_next else None
+    # Create pagination object with iter_pages support
+    from services.pagination import Pagination
+    orders = Pagination(page, per_page, total, orders_list)
     
-    pagination = {
-        'items': orders_list,
-        'has_prev': has_prev,
-        'has_next': has_next,
-        'prev_num': prev_num,
-        'next_num': next_num,
-        'page': page,
-        'pages': (total + per_page - 1) // per_page,
-        'total': total
-    }
-    
-    return render_template('admin/orders.html', orders=pagination, status_filter=status_filter)
+    return render_template('admin/orders.html', orders=orders, status_filter=status_filter)
 
 @admin_bp.route('/chat-sessions')
 @admin_required
@@ -199,24 +160,11 @@ def chat_sessions():
     sessions_list = ChatSession.objects.order_by('-created_at').skip(skip).limit(per_page)
     total = ChatSession.objects.count()
     
-    # Create pagination info
-    has_prev = page > 1
-    has_next = skip + per_page < total
-    prev_num = page - 1 if has_prev else None
-    next_num = page + 1 if has_next else None
+    # Create pagination object with iter_pages support
+    from services.pagination import Pagination
+    sessions = Pagination(page, per_page, total, sessions_list)
     
-    pagination = {
-        'items': sessions_list,
-        'has_prev': has_prev,
-        'has_next': has_next,
-        'prev_num': prev_num,
-        'next_num': next_num,
-        'page': page,
-        'pages': (total + per_page - 1) // per_page,
-        'total': total
-    }
-    
-    return render_template('admin/chat_sessions.html', sessions=pagination)
+    return render_template('admin/chat_sessions.html', sessions=sessions)
 
 @admin_bp.route('/chat-sessions/<session_id>')
 @admin_required
@@ -282,26 +230,13 @@ def products(business_id):
         total = Product.objects(business=business).count()
         categories = Category.objects(business=business)
         
-        # Create pagination info
-        has_prev = page > 1
-        has_next = skip + per_page < total
-        prev_num = page - 1 if has_prev else None
-        next_num = page + 1 if has_next else None
-        
-        pagination = {
-            'items': products_list,
-            'has_prev': has_prev,
-            'has_next': has_next,
-            'prev_num': prev_num,
-            'next_num': next_num,
-            'page': page,
-            'pages': (total + per_page - 1) // per_page,
-            'total': total
-        }
+        # Create pagination object with iter_pages support
+        from services.pagination import Pagination
+        products = Pagination(page, per_page, total, products_list)
         
         return render_template('admin/products.html',
                              business=business,
-                             products=pagination,
+                             products=products,
                              categories=categories)
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
