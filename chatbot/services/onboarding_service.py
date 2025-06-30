@@ -74,12 +74,15 @@ class OnboardingService:
                     return self._move_to_next_step(state, "Great! First, I'd love to know who I'm speaking with.\n\nWhat's your Name?")
                 elif button_id == "complete_registration" and current_step == "complete_registration":
                     return self._complete_registration(state)
-                elif current_step == "collect_business_category" and button_id in ["electronics", "food", "technology"]:
+                elif current_step == "collect_business_category" and button_id in ["electronics", "food", "health", "household", "travel", "technology"]:
                     # Map button IDs to proper category names
                     category_map = {
                         "electronics": "Electronics",
-                        "food": "Food",
-                        "technology": "Technology"
+                        "food": "Food & Beverages",
+                        "health": "Health & Wellness",
+                        "household": "Household & Home",
+                        "travel": "Travel & Tourism",
+                        "technology": "Technology & Software"
                     }
                     data['business_category'] = category_map[button_id]
                     return self._send_completion_message(state, data)
@@ -139,24 +142,57 @@ class OnboardingService:
     
     def _send_category_selection(self, state, data):
         """Send business category selection"""
-        from services.messaging_service import send_whatsapp_interactive_message
+        from services.messaging_service import send_whatsapp_list_message
         
         state.current_step = "collect_business_category"
         state.data = data
         state.save()
         
-        buttons = [
-            {"text": "Electronics", "id": "electronics"},
-            {"text": "Food", "id": "food"},
-            {"text": "Technology", "id": "technology"}
+        sections = [
+            {
+                "title": "Business Categories",
+                "rows": [
+                    {
+                        "id": "electronics",
+                        "title": "Electronics",
+                        "description": "Gadgets, devices, and electronic equipment"
+                    },
+                    {
+                        "id": "food",
+                        "title": "Food & Beverages",
+                        "description": "Restaurants, cafes, food delivery, and catering"
+                    },
+                    {
+                        "id": "health",
+                        "title": "Health & Wellness",
+                        "description": "Medical services, fitness, beauty, and wellness"
+                    },
+                    {
+                        "id": "household",
+                        "title": "Household & Home",
+                        "description": "Home goods, furniture, and household items"
+                    },
+                    {
+                        "id": "travel",
+                        "title": "Travel & Tourism",
+                        "description": "Travel agencies, hotels, and tourism services"
+                    },
+                    {
+                        "id": "technology",
+                        "title": "Technology & Software",
+                        "description": "IT services, software, and tech solutions"
+                    }
+                ]
+            }
         ]
         
-        return send_whatsapp_interactive_message(
+        return send_whatsapp_list_message(
             state.phone_number,
-            "Your Business category",
+            "Your Business Category",
             "What category does your business fall under?",
-            "Select a button that represents your business category",
-            buttons
+            "Choose the category that best represents your business",
+            "Select Category",
+            sections
         )
     
     def _send_completion_message(self, state, data):

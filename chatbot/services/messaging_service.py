@@ -76,6 +76,16 @@ def process_whatsapp_message(data):
                     'phone_number': phone_number,
                     'button_id': button_id
                 })
+            elif 'list_reply' in interactive:
+                list_id = interactive['list_reply'].get('id')
+                if not phone_number or not list_id:
+                    logger.error(f"Missing required fields: phone={phone_number}, list_id={list_id}")
+                    return jsonify({"error": "Missing required fields"}), 400
+                    
+                return handle_user_message({
+                    'phone_number': phone_number,
+                    'button_id': list_id  # Use same parameter name for consistency
+                })
         
         logger.error("Unsupported message type")
         return jsonify({"error": "Unsupported message type"}), 400
@@ -573,6 +583,49 @@ def handle_button_response(phone_number, button_id):
         
     except Exception as e:
         logger.error(f"Error handling button response: {str(e)}")
+        raise
+
+def send_whatsapp_list_message(phone_number, header, body, footer, button_text, sections):
+    """
+    Send an interactive WhatsApp list message
+    sections format: [{"title": "Section Title", "rows": [{"id": "row_id", "title": "Row Title", "description": "Row Description"}]}]
+    """
+    try:
+        WHATSAPP_API_URL = f"https://graph.facebook.com/v17.0/{os.getenv('WHATSAPP_PHONE_ID')}/messages"
+        headers = {
+            "Authorization": f"Bearer {os.getenv('WHATSAPP_ACCESS_TOKEN')}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": phone_number,
+            "type": "interactive",
+            "interactive": {
+                "type": "list",
+                "header": {
+                    "type": "text",
+                    "text": header
+                },
+                "body": {
+                    "text": body
+                },
+                "footer": {
+                    "text": footer
+                },
+                "action": {
+                    "button": button_text,
+                    "sections": sections
+                }
+            }
+        }
+        
+        response = requests.post(WHATSAPP_API_URL, json=payload, headers=headers)
+        response.raise_for_status()
+        return response.json()
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"WhatsApp API error: {str(e)}")
         raise
 
 def handle_product_variations(phone_number, product_id):
