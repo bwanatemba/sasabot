@@ -360,7 +360,16 @@ def products(business_id):
             flash('Access denied.', 'error')
             return redirect(url_for('vendor.businesses'))
         
-        products = Product.objects(business=business)
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = 10  # Number of products per page
+        
+        # Get paginated products
+        products = Product.objects(business=business).paginate(
+            page=page, 
+            per_page=per_page,
+            error_out=False
+        )
         categories = Category.objects(business=business)
         
         return render_template('vendor/products.html',

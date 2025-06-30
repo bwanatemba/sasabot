@@ -94,7 +94,7 @@
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-link"></i></span>
                                 <input type="text" class="form-control" id="webhook_url" 
-                                       value="{{ url_for('api.whatsapp_webhook', _external=True) }}" readonly>
+                                       value="{{ url_for('handle_whatsapp_webhook', _external=True) }}" readonly>
                                 <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('webhook_url')">
                                     <i class="fas fa-copy"></i>
                                 </button>
