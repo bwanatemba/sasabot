@@ -13,8 +13,13 @@ def create_database_config(app):
     if not mongodb_uri:
         raise ValueError("MONGODB_URI environment variable is required")
     
-    # Connect to MongoDB Atlas
-    connect(host=mongodb_uri)
+    # Connect to MongoDB Atlas with error handling
+    try:
+        connect(host=mongodb_uri)
+        print(f"Successfully connected to MongoDB")
+    except Exception as e:
+        print(f"Failed to connect to MongoDB: {str(e)}")
+        raise e
     
     # Set Flask configurations for session management
     app.config['SESSION_TYPE'] = 'filesystem'

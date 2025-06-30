@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
 from services import messaging_service
 import os
@@ -123,16 +123,50 @@ def create_app():
 
     @app.errorhandler(500)
     def handle_server_error(e):
-        logger.error(f"Server error: {str(e)}")
+        logger.error(f"Server error: {str(e)}", exc_info=True)
         if request.path.startswith('/api/'):
             return jsonify({"error": "Internal server error occurred"}), 500
+        if request.path.startswith('/vendor/'):
+            return render_template('errors/500.html'), 500
         return "Internal server error", 500
     
+    # Add error logging middleware
+    @app.before_request
+    def log_request_info():
+        if request.path.startswith('/vendor/'):
+            logger.info(f"Vendor request: {request.method} {request.path} from {request.remote_addr}")
+
+    @app.after_request
+    def log_response_info(response):
+        if request.path.startswith('/vendor/') and response.status_code >= 400:
+            logger.error(f"Vendor response error: {response.status_code} for {request.path}")
+        return response
+
     # Favicon route
     @app.route('/favicon.ico')
     def favicon():
         return send_from_directory(os.path.join(app.root_path, 'static', 'images'),
                                  'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    
+    # Health check route
+    @app.route('/health')
+    def health_check():
+        try:
+            # Test database connection
+            from models import Admin
+            Admin.objects.first()
+            return jsonify({
+                "status": "healthy",
+                "database": "connected",
+                "timestamp": datetime.now().isoformat()
+            }), 200
+        except Exception as e:
+            logger.error(f"Health check failed: {e}")
+            return jsonify({
+                "status": "unhealthy", 
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }), 500
     
     # Initialize database
     init_database(app)

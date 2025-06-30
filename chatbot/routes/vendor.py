@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_required, current_user
-from models import Business, Product, Category, Order, Customer, ChatSession, ChatMessage, ProductVariation, OrderItem
+from models import Business, Product, Category, Order, Customer, ChatSession, ChatMessage, ProductVariation, OrderItem, Vendor
 from services.auth.decorators import vendor_required
 from services.auth.auth_manager import get_user_role
 from services.image_service import update_product_image, get_image_url, delete_image_from_gridfs
@@ -13,52 +13,201 @@ import io
 import os
 import secrets
 import string
+import logging
 from datetime import datetime, timedelta
+
+# Handle pandas import gracefully
+PANDAS_AVAILABLE = False
 try:
     import pandas as pd
     PANDAS_AVAILABLE = True
 except ImportError as e:
-    PANDAS_AVAILABLE = False
-    print(f"Warning: pandas import failed: {e}")
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
+    logging.getLogger(__name__).warning(f"pandas not available: {e}")
+    pd = None
+
+# Handle reportlab import gracefully  
+try:
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+    REPORTLAB_AVAILABLE = True
+except ImportError as e:
+    logging.getLogger(__name__).warning(f"reportlab not available: {e}")
+    REPORTLAB_AVAILABLE = False
 
 vendor_bp = Blueprint('vendor', __name__, url_prefix='/vendor')
+
+def cleanup_database_connections():
+    """Clean up stale database connections"""
+    try:
+        from mongoengine import disconnect, connect
+        import os
+        
+        # Disconnect existing connections
+        disconnect()
+        
+        # Reconnect with fresh connection
+        mongodb_uri = os.getenv('MONGODB_URI')
+        if mongodb_uri:
+            connect(host=mongodb_uri)
+            return True
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Database cleanup failed: {e}")
+    return False
 
 @vendor_bp.route('/dashboard')
 @vendor_required
 def dashboard():
-    # Get vendor's businesses
-    if get_user_role(current_user) == 'admin':
-        businesses = Business.objects.all()
-    else:
-        businesses = Business.objects(vendor=current_user)
-    
-    # Get statistics for vendor's businesses
-    business_list = list(businesses)
-    
-    if business_list:
-        total_orders = Order.objects(business__in=business_list).count()
-        paid_orders = Order.objects(business__in=business_list, payment_status='paid').count()
+    logger = logging.getLogger(__name__)
+    try:
+        logger.info(f"Dashboard accessed by user: {current_user.id if current_user else 'None'}")
         
-        # Calculate total revenue
-        paid_orders_list = Order.objects(business__in=business_list, payment_status='paid')
-        total_revenue = sum(order.total_amount for order in paid_orders_list)
+        # Test database connectivity
+        try:
+            from mongoengine import connection
+            connection.get_db()
+            logger.info("Database connection verified")
+        except Exception as db_error:
+            logger.error(f"Database connection failed: {db_error}")
+            # Try to cleanup and reconnect
+            if cleanup_database_connections():
+                logger.info("Database reconnection successful")
+            else:
+                flash('Database connection error. Please try again later.', 'error')
+                return redirect(url_for('main.index'))
         
-        pending_orders = Order.objects(business__in=business_list, status='pending').count()
-    else:
+        # Validate current user
+        if not current_user or not current_user.is_authenticated:
+            logger.error("Dashboard access attempted without authentication")
+            flash('Authentication required', 'error')
+            return redirect(url_for('auth.login'))
+        
+        # Initialize default values
+        businesses = []
         total_orders = paid_orders = total_revenue = pending_orders = 0
+        recent_orders = []
+        
+        # Get vendor's businesses
+        user_role = get_user_role(current_user)
+        logger.info(f"User role: {user_role}")
+        
+        if user_role == 'admin':
+            businesses = list(Business.objects.all())
+            logger.info(f"Admin accessing all businesses, count: {len(businesses)}")
+        elif user_role == 'vendor':
+            # Ensure vendor exists in database
+            try:
+                vendor_obj = Vendor.objects(id=current_user.id).first()
+                if not vendor_obj:
+                    logger.error(f"Vendor object not found for user ID: {current_user.id}")
+                    flash('Vendor profile not found. Please contact support.', 'error')
+                    return redirect(url_for('main.index'))
+                
+                businesses = list(Business.objects(vendor=vendor_obj))
+                logger.info(f"Vendor accessing their businesses, count: {len(businesses)}")
+            except Exception as e:
+                logger.error(f"Error fetching vendor businesses: {e}")
+                businesses = []
+        else:
+            logger.warning(f"Invalid user role: {user_role}")
+            flash('Invalid user role', 'error')
+            return redirect(url_for('main.index'))
+        
+        # Get statistics for vendor's businesses
+        if businesses:
+            logger.info(f"Processing statistics for {len(businesses)} businesses")
+            
+            # Use try-catch for each database query
+            try:
+                total_orders = Order.objects(business__in=businesses).count()
+                logger.info(f"Total orders: {total_orders}")
+            except Exception as e:
+                logger.error(f"Error getting total orders: {e}")
+                total_orders = 0
+            
+            try:
+                paid_orders = Order.objects(business__in=businesses, payment_status='paid').count()
+                logger.info(f"Paid orders: {paid_orders}")
+            except Exception as e:
+                logger.error(f"Error getting paid orders: {e}")
+                paid_orders = 0
+            
+            try:
+                # Calculate total revenue with safety checks
+                paid_orders_list = Order.objects(business__in=businesses, payment_status='paid')
+                total_revenue = 0
+                for order in paid_orders_list:
+                    if hasattr(order, 'total_amount') and order.total_amount:
+                        total_revenue += float(order.total_amount)
+                logger.info(f"Total revenue: {total_revenue}")
+            except Exception as e:
+                logger.error(f"Error calculating revenue: {e}")
+                total_revenue = 0
+            
+            try:
+                pending_orders = Order.objects(business__in=businesses, status='pending').count()
+                logger.info(f"Pending orders: {pending_orders}")
+            except Exception as e:
+                logger.error(f"Error getting pending orders: {e}")
+                pending_orders = 0
+            
+            try:
+                # Recent orders
+                recent_orders = list(Order.objects(business__in=businesses).order_by('-created_at').limit(10))
+                logger.info(f"Retrieved {len(recent_orders)} recent orders")
+            except Exception as e:
+                logger.error(f"Error getting recent orders: {e}")
+                recent_orders = []
+        else:
+            logger.info("No businesses found for user")
+        
+        # Ensure all template variables are properly set with safe defaults
+        template_vars = {
+            'businesses': businesses or [],
+            'total_orders': max(0, int(total_orders)),
+            'paid_orders': max(0, int(paid_orders)),
+            'total_revenue': max(0.0, float(total_revenue)),
+            'pending_orders': max(0, int(pending_orders)),
+            'recent_orders': recent_orders or []
+        }
+        
+        logger.info(f"Template variables: {template_vars}")
+        
+        # Validate template variables before rendering
+        for key, value in template_vars.items():
+            if value is None:
+                logger.warning(f"Template variable {key} is None, setting to default")
+                if key in ['businesses', 'recent_orders']:
+                    template_vars[key] = []
+                else:
+                    template_vars[key] = 0
+        
+        # Try to render the main template, fallback to simple template if it fails
+        try:
+            return render_template('vendor/dashboard.html', **template_vars)
+        except Exception as template_error:
+            logger.error(f"Main template rendering failed: {template_error}")
+            try:
+                return render_template('vendor/dashboard_fallback.html', **template_vars)
+            except Exception as fallback_error:
+                logger.error(f"Fallback template also failed: {fallback_error}")
+                # Return a very basic response
+                return f"""
+                <html>
+                <head><title>Vendor Dashboard</title></head>
+                <body>
+                    <h1>Vendor Dashboard</h1>
+                    <p>Orders: {template_vars['total_orders']}</p>
+                    <p>Revenue: KSH {template_vars['total_revenue']}</p>
+                    <p>Businesses: {len(template_vars['businesses'])}</p>
+                    <a href="/vendor/businesses">View Businesses</a>
+                </body>
+                </html>
+                """, 200
     
-    # Recent orders
-    recent_orders = Order.objects(business__in=business_list).order_by('-created_at').limit(10) if business_list else []
-    
-    return render_template('vendor/dashboard.html',
-                         businesses=businesses,
-                         total_orders=total_orders,
-                         paid_orders=paid_orders,
-                         total_revenue=total_revenue,
-                         pending_orders=pending_orders,
-                         recent_orders=recent_orders)
+    except Exception as e:
+        logger.error(f"Error in vendor dashboard: {str(e)}", exc_info=True)
+        flash('An error occurred while loading the dashboard. Please try again.', 'error')
+        return redirect(url_for('main.index'))
 
 @vendor_bp.route('/profile')
 @vendor_required
