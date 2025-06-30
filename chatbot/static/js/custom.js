@@ -2,7 +2,20 @@
 
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
+    // Wait for jQuery to be available
+    if (typeof jQuery !== 'undefined') {
+        initializeApp();
+    } else {
+        // Retry after a short delay if jQuery is not yet loaded
+        setTimeout(function() {
+            if (typeof jQuery !== 'undefined') {
+                initializeApp();
+            } else {
+                console.error('jQuery is not available. Some features may not work properly.');
+                initializeAppWithoutJQuery();
+            }
+        }, 100);
+    }
 });
 
 function initializeApp() {
@@ -12,6 +25,16 @@ function initializeApp() {
     initializeCharts();
     initializeFormValidation();
     initializeDataTables();
+    initializeBulkActions();
+    initializeRealTimeUpdates();
+}
+
+function initializeAppWithoutJQuery() {
+    initializeTooltips();
+    initializePopovers();
+    initializeFileUploads();
+    initializeCharts();
+    initializeFormValidation();
     initializeBulkActions();
     initializeRealTimeUpdates();
 }
@@ -228,7 +251,7 @@ function initializeFormValidation() {
 
 // DataTables Initialization
 function initializeDataTables() {
-    if (typeof $.fn.DataTable !== 'undefined') {
+    if (typeof $ !== 'undefined' && typeof $.fn.DataTable !== 'undefined') {
         $('.data-table').DataTable({
             responsive: true,
             pageLength: 25,
@@ -250,6 +273,8 @@ function initializeDataTables() {
                 { orderable: false, targets: 'no-sort' }
             ]
         });
+    } else {
+        console.warn('jQuery or DataTables not available. Tables will display without enhanced functionality.');
     }
 }
 

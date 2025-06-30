@@ -11,8 +11,10 @@ document.addEventListener('DOMContentLoaded', function() {
         setInterval(updateDashboardStats, 30000); // Update every 30 seconds
     }
 
-    // Initialize data tables if available
-    if (typeof DataTable !== 'undefined') {
+    // Initialize data tables if available - check for both jQuery and DataTable
+    if (typeof $ !== 'undefined' && typeof $.fn.DataTable !== 'undefined') {
+        initializeDataTables();
+    } else if (typeof DataTable !== 'undefined') {
         initializeDataTables();
     }
 });
@@ -190,22 +192,45 @@ function initializeDataTables() {
     // Initialize all tables with class 'data-table'
     const tables = document.querySelectorAll('.data-table');
     tables.forEach(table => {
-        new DataTable(table, {
-            responsive: true,
-            pageLength: 25,
-            order: [[0, 'desc']],
-            language: {
-                search: "Search:",
-                lengthMenu: "Show _MENU_ entries",
-                info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                paginate: {
-                    first: "First",
-                    last: "Last",
-                    next: "Next",
-                    previous: "Previous"
+        // Check if jQuery DataTables is available
+        if (typeof $ !== 'undefined' && typeof $.fn.DataTable !== 'undefined') {
+            $(table).DataTable({
+                responsive: true,
+                pageLength: 25,
+                order: [[0, 'desc']],
+                language: {
+                    search: "Search:",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        first: "First",
+                        last: "Last",
+                        next: "Next",
+                        previous: "Previous"
+                    }
                 }
-            }
-        });
+            });
+        } else if (typeof DataTable !== 'undefined') {
+            // Fallback to vanilla DataTable if available
+            new DataTable(table, {
+                responsive: true,
+                pageLength: 25,
+                order: [[0, 'desc']],
+                language: {
+                    search: "Search:",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        first: "First",
+                        last: "Last",
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                }
+            });
+        } else {
+            console.warn('DataTables not available for table:', table);
+        }
     });
 }
 

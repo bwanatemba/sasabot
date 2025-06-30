@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from services import messaging_service
 import os
@@ -106,7 +106,7 @@ def create_app():
     def inject_current_user():
         return dict(current_user=current_user)
     
-    # Error handlers
+    # Register error handlers
     @app.errorhandler(400)
     def handle_bad_request(e):
         return jsonify({"error": "Bad request, check your JSON payload"}), 400
@@ -127,6 +127,12 @@ def create_app():
         if request.path.startswith('/api/'):
             return jsonify({"error": "Internal server error occurred"}), 500
         return "Internal server error", 500
+    
+    # Favicon route
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(os.path.join(app.root_path, 'static', 'images'),
+                                 'favicon.ico', mimetype='image/vnd.microsoft.icon')
     
     # Initialize database
     init_database(app)

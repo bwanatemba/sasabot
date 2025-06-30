@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.tailwindcss.com https://cdn.datatables.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' data: https: blob:;">
     <title>{% block title %}SasaBot - Digital Business Transformation{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -14,14 +18,17 @@
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    <!-- jQuery (required for DataTables) -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     
     <!-- Chart.js for analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- DataTables for enhanced tables -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
     
     <style>
         :root {
@@ -211,20 +218,14 @@
         </div>
     </div>
     
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    
     <!-- Custom JavaScript -->
     <script>
-        // Auto-hide flash messages
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                if (alert.querySelector('.btn-close')) {
-                    alert.querySelector('.btn-close').click();
-                }
-            });
-        }, 5000);
+        // Global variables
+        window.csrfToken = '{{ csrf_token() if csrf_token else "" }}';
+        window.currentUser = {
+            role: '{{ current_user.role if current_user and current_user.is_authenticated else "anonymous" }}',
+            id: '{{ current_user.id if current_user and current_user.is_authenticated else "" }}'
+        };
         
         // Loading overlay functions
         function showLoading() {
@@ -238,18 +239,20 @@
         // Mobile sidebar toggle
         function toggleSidebar() {
             const sidebar = document.querySelector('.sidebar');
+            const backdrop = document.querySelector('.sidebar-backdrop');
+            
             if (sidebar) {
                 sidebar.classList.toggle('show');
             }
+            if (backdrop) {
+                backdrop.classList.toggle('show');
+            }
         }
         
-        // Close mobile sidebar when clicking outside
+        // Close sidebar when clicking backdrop
         document.addEventListener('click', function(event) {
-            const sidebar = document.querySelector('.sidebar');
-            const toggleBtn = event.target.closest('[onclick="toggleSidebar()"]');
-            
-            if (sidebar && !sidebar.contains(event.target) && !toggleBtn) {
-                sidebar.classList.remove('show');
+            if (event.target.classList.contains('sidebar-backdrop')) {
+                toggleSidebar();
             }
         });
         
@@ -263,66 +266,52 @@
             return false;
         }
         
-        // AJAX helper function
-        function makeAjaxRequest(url, method, data, successCallback, errorCallback) {
+        // AJAX helper functions
+        function makeAjaxRequest(url, options = {}) {
             showLoading();
             
-            fetch(url, {
-                method: method,
+            const defaultOptions = {
+                method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: data ? JSON.stringify(data) : null
+                }
+            };
+            
+            if (window.csrfToken) {
+                defaultOptions.headers['X-CSRFToken'] = window.csrfToken;
+            }
+            
+            return fetch(url, { ...defaultOptions, ...options })
+                .finally(() => hideLoading());
+        }
+        
+        // Update status function for orders, products, etc.
+        function updateStatus(url, statusValue, callback) {
+            makeAjaxRequest(url, {
+                method: 'POST',
+                body: JSON.stringify({ status: statusValue })
             })
             .then(response => response.json())
             .then(data => {
-                hideLoading();
-                if (successCallback) successCallback(data);
+                if (data.success) {
+                    if (typeof SasaBot !== 'undefined' && SasaBot.showAlert) {
+                        SasaBot.showAlert(data.message || 'Status updated successfully', 'success');
+                    }
+                    if (callback) callback(data);
+                } else {
+                    if (typeof SasaBot !== 'undefined' && SasaBot.showAlert) {
+                        SasaBot.showAlert(data.message || 'Error updating status', 'error');
+                    }
+                }
             })
             .catch(error => {
-                hideLoading();
-                if (errorCallback) errorCallback(error);
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- DataTables JS -->
-    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
-    
-    <!-- Custom JavaScript -->
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/forms.js') }}"></script>
-    
-    {% if request.endpoint and ('dashboard' in request.endpoint or 'analytics' in request.endpoint) %}
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-    {% endif %}
-    
-    <script>
-        // Global variables
-        window.csrfToken = '{{ csrf_token() if csrf_token else "" }}';
-        window.currentUser = {
-            role: '{{ current_user.role if current_user and current_user.is_authenticated else "anonymous" }}',
-            id: '{{ current_user.id if current_user and current_user.is_authenticated else "" }}'
-        };
-        
-        // Mobile sidebar toggle
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            const backdrop = document.querySelector('.sidebar-backdrop');
-            
-            if (sidebar && backdrop) {
-                sidebar.classList.toggle('show');
-                backdrop.classList.toggle('show');
-            }
+                if (typeof SasaBot !== 'undefined' && SasaBot.showAlert) {
+                    SasaBot.showAlert('An error occurred while updating status', 'error');
+                }
+                console.error('Error:', error);
+            });
         }
-        
-        // Close sidebar when clicking backdrop
-        document.addEventListener('click', function(event) {
-            if (event.target.classList.contains('sidebar-backdrop')) {
-                toggleSidebar();
-            }
-        });
         
         // Navbar scroll effect
         window.addEventListener('scroll', function() {
@@ -338,6 +327,16 @@
         
         // Page initialization
         document.addEventListener('DOMContentLoaded', function() {
+            // Auto-hide flash messages
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    if (alert.querySelector('.btn-close')) {
+                        alert.querySelector('.btn-close').click();
+                    }
+                });
+            }, 5000);
+            
             // Initialize tooltips
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -356,7 +355,7 @@
                 form.addEventListener('submit', function() {
                     const submitButton = form.querySelector('button[type="submit"]');
                     if (submitButton && !form.classList.contains('ajax-form')) {
-                        SasaBot.showLoading(submitButton);
+                        showLoading();
                     }
                 });
             });
@@ -373,50 +372,57 @@
             });
         });
         
-        // AJAX helper functions
-        function makeAjaxRequest(url, options = {}) {
-            const defaultOptions = {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            };
-            
-            if (window.csrfToken) {
-                defaultOptions.headers['X-CSRFToken'] = window.csrfToken;
-            }
-            
-            return fetch(url, { ...defaultOptions, ...options });
-        }
-        
-        // Update status function for orders, products, etc.
-        function updateStatus(url, statusValue, callback) {
-            makeAjaxRequest(url, {
-                method: 'POST',
-                body: JSON.stringify({ status: statusValue })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    SasaBot.showAlert(data.message || 'Status updated successfully', 'success');
-                    if (callback) callback(data);
-                } else {
-                    SasaBot.showAlert(data.message || 'Error updating status', 'error');
-                }
-            })
-            .catch(error => {
-                SasaBot.showAlert('An error occurred while updating status', 'error');
-                console.error('Error:', error);
-            });
-        }
-        
         // Export functions for global use
+        window.showLoading = showLoading;
+        window.hideLoading = hideLoading;
         window.toggleSidebar = toggleSidebar;
         window.makeAjaxRequest = makeAjaxRequest;
         window.updateStatus = updateStatus;
+        window.validateForm = validateForm;
     </script>
     
     {% block extra_js %}{% endblock %}
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/forms.js') }}"></script>
+    
+    {% if request.endpoint and ('dashboard' in request.endpoint or 'analytics' in request.endpoint) %}
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% endif %}
+    
+    <!-- Global error handling for message channel errors -->
+    <script>
+        // Handle promise rejections and message channel errors
+        window.addEventListener('unhandledrejection', function(event) {
+            // Suppress the message channel error that commonly occurs with browser extensions
+            if (event.reason && event.reason.message && 
+                event.reason.message.includes('message channel closed')) {
+                event.preventDefault();
+                console.debug('Suppressed message channel error (likely browser extension)');
+                return;
+            }
+            // Log other unhandled promise rejections
+            console.error('Unhandled promise rejection:', event.reason);
+        });
+        
+        // Suppress console errors for message channel
+        const originalError = console.error;
+        console.error = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('message channel closed') || 
+                message.includes('listener indicated an asynchronous response')) {
+                return; // Suppress these specific errors
+            }
+            originalError.apply(console, args);
+        };
+    </script>
 </body>
 </html>
