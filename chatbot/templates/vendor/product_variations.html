@@ -57,6 +57,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('vendor.product_variations', product_id=product.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <input type="hidden" name="action" value="add_variation">
                         <div class="row">
                             <div class="col-md-4">
@@ -146,6 +147,7 @@
                                                 <!-- Toggle Status -->
                                                 <form method="POST" style="display: inline;" 
                                                       action="{{ url_for('vendor.product_variations', product_id=product.id) }}">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                                     <input type="hidden" name="action" value="toggle_variation">
                                                     <input type="hidden" name="variation_id" value="{{ variation.variation_id }}">
                                                     <button type="submit" class="btn btn-outline-warning" 
@@ -158,6 +160,7 @@
                                                 <form method="POST" style="display: inline;" 
                                                       action="{{ url_for('vendor.product_variations', product_id=product.id) }}"
                                                       onsubmit="return confirm('Are you sure you want to delete this variation?')">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                                     <input type="hidden" name="action" value="delete_variation">
                                                     <input type="hidden" name="variation_id" value="{{ variation.variation_id }}">
                                                     <button type="submit" class="btn btn-outline-danger" title="Delete">

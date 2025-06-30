@@ -28,6 +28,7 @@
                 </div>
                 <div class="card-body">
                     <form method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="row">
                             <!-- Profile Picture Section -->
                             <div class="col-12 mb-4">

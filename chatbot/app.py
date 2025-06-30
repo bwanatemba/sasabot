@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from flask_cors import CORS
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from services import messaging_service
 import os
 import logging
@@ -111,9 +111,20 @@ def create_app():
         return dict(current_user=current_user)
     
     # Register error handlers
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        flash('Security token expired or missing. Please try again.', 'error')
+        return redirect(request.referrer or url_for('main.index'))
+    
     @app.errorhandler(400)
     def handle_bad_request(e):
-        return jsonify({"error": "Bad request, check your JSON payload"}), 400
+        # Check if this is an API request or expects JSON response
+        if request.path.startswith('/api/') or request.is_json or 'application/json' in request.headers.get('Accept', ''):
+            return jsonify({"error": "Bad request, check your JSON payload"}), 400
+        else:
+            # For form submissions and other requests, show a proper error page
+            flash('Bad request. Please check your form data and try again.', 'error')
+            return redirect(request.referrer or url_for('main.index'))
 
     @app.errorhandler(404)
     def handle_not_found(e):

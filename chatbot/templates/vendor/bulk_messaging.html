@@ -20,6 +20,7 @@
                                 </div>
                                 <div class="card-body">
                                     <form method="POST" action="{{ url_for('vendor.send_bulk_message') }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         <div class="mb-3">
                                             <label for="business_id" class="form-label">Business</label>
                                             <select class="form-select" name="business_id" required>
@@ -84,6 +85,7 @@
                                 </div>
                                 <div class="card-body">
                                     <form method="POST" action="{{ url_for('vendor.send_promotional_message') }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                         <div class="mb-3">
                                             <label for="promo_business_id" class="form-label">Business</label>
                                             <select class="form-select" name="business_id" required>
