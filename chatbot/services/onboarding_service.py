@@ -74,10 +74,10 @@ class OnboardingService:
                     return self._move_to_next_step(state, "Great! First, I'd love to know who I'm speaking with.\n\nWhat's your Name?")
                 elif button_id == "complete_registration" and current_step == "complete_registration":
                     return self._complete_registration(state)
-                elif current_step == "collect_business_category" and button_id in ["electronics", "food", "health", "household", "travel", "technology"]:
+                elif current_step == "collect_business_category" and button_id in ["service", "food", "health", "household", "travel", "technology"]:
                     # Map button IDs to proper category names
                     category_map = {
-                        "electronics": "Electronics",
+                        "service": "Pro. Services",
                         "food": "Food & Beverages",
                         "health": "Health & Wellness",
                         "household": "Household & Home",
@@ -153,9 +153,9 @@ class OnboardingService:
                 "title": "Business Categories",
                 "rows": [
                     {
-                        "id": "electronics",
-                        "title": "Electronics",
-                        "description": "Gadgets, devices, and electronic equipment"
+                        "id": "service",
+                        "title": "Pro. Services",
+                        "description": "Professional services in various fields"
                     },
                     {
                         "id": "food",
