@@ -80,7 +80,11 @@
         }
         
         .loading {
-            display: none;
+            display: none !important;
+        }
+        
+        .loading.show {
+            display: flex !important;
         }
         
         .flash-messages {
@@ -229,11 +233,17 @@
         
         // Loading overlay functions
         function showLoading() {
-            document.querySelector('.loading').style.display = 'flex';
+            const loader = document.querySelector('.loading');
+            if (loader) {
+                loader.classList.add('show');
+            }
         }
         
         function hideLoading() {
-            document.querySelector('.loading').style.display = 'none';
+            const loader = document.querySelector('.loading');
+            if (loader) {
+                loader.classList.remove('show');
+            }
         }
         
         // Mobile sidebar toggle
@@ -327,6 +337,9 @@
         
         // Page initialization
         document.addEventListener('DOMContentLoaded', function() {
+            // Hide loading overlay immediately when DOM is ready
+            hideLoading();
+            
             // Auto-hide flash messages
             setTimeout(function() {
                 const alerts = document.querySelectorAll('.alert');
@@ -372,6 +385,11 @@
             });
         });
         
+        // Also hide loading when window finishes loading
+        window.addEventListener('load', function() {
+            hideLoading();
+        });
+        
         // Export functions for global use
         window.showLoading = showLoading;
         window.hideLoading = hideLoading;
@@ -402,6 +420,9 @@
     <script>
         // Handle promise rejections and message channel errors
         window.addEventListener('unhandledrejection', function(event) {
+            // Hide loading overlay on unhandled errors
+            hideLoading();
+            
             // Suppress the message channel error that commonly occurs with browser extensions
             if (event.reason && event.reason.message && 
                 event.reason.message.includes('message channel closed')) {
@@ -411,6 +432,12 @@
             }
             // Log other unhandled promise rejections
             console.error('Unhandled promise rejection:', event.reason);
+        });
+        
+        // Handle general JavaScript errors
+        window.addEventListener('error', function(event) {
+            // Hide loading overlay on JavaScript errors
+            hideLoading();
         });
         
         // Suppress console errors for message channel

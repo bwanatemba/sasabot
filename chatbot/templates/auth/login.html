@@ -133,7 +133,16 @@ function validateForm(formId) {
         return false;
     }
     
+    // Show loading only on valid form submission
     showLoading();
+    
+    // Hide loading if form submission fails (fallback)
+    setTimeout(function() {
+        if (window.location.pathname === '/login') {
+            hideLoading();
+        }
+    }, 5000);
+    
     return true;
 }
 
