@@ -706,7 +706,7 @@ def clean_phone_number(phone_number):
 def is_mpesa_number(message):
     """Check if message is an Mpesa phone number"""
     cleaned = ''.join(filter(str.isdigit, message))
-    return len(cleaned) in [9, 10, 12] and (cleaned.startswith('0') or cleaned.startswith('254'))
+    return len(cleaned) in [9, 10, 12] and (cleaned.startswith('0') or cleaned.startswith('250'))
 
 def handle_user_message(data):
     """
