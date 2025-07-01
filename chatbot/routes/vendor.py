@@ -850,7 +850,7 @@ def analytics(business_id):
         from services.analytics_service import AnalyticsService
         analytics_data = AnalyticsService.get_business_analytics(str(business.id), days)
         
-        return render_template('vendor/analytics.html',
+        return render_template('vendor/business_analytics.html',
                              business=business,
                              analytics=analytics_data,
                              days=days)
