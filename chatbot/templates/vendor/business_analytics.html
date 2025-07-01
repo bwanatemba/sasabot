@@ -19,7 +19,7 @@
                             <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
                             <option value="365" {% if days == 365 %}selected{% endif %}>Last year</option>
                         </select>
-                        <a href="{{ url_for('vendor.analytics') }}" class="btn btn-sm btn-light">
+                        <a href="{{ url_for('vendor.businesses') }}" class="btn btn-sm btn-light">
                             <i class="fas fa-arrow-left"></i> Back
                         </a>
                     </div>
@@ -254,11 +254,11 @@
 <script>
 function changePeriod() {
     const days = document.getElementById('daysPicker').value;
-    window.location.href = `{{ url_for('vendor.business_analytics', business_id=business.id) }}?days=${days}`;
+    window.location.href = `{{ url_for('vendor.analytics', business_id=business.id) }}?days=${days}`;
 }
 
 function exportData(type) {
-    const url = `{{ url_for('vendor.export_analytics', business_id=business.id) }}?type=${type}&days={{ days }}`;
+    const url = `{{ url_for('vendor.export_data', business_id=business.id) }}?type=${type}&days={{ days }}`;
     window.open(url);
 }
 
