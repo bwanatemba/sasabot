@@ -617,4 +617,4 @@ class AnalyticsService:
             
         except Exception as e:
             logger.error(f"Error exporting chats: {str(e)}")
-            return {"error": str(e)}"
+            return {"error": str(e)}
