@@ -2,7 +2,7 @@ import logging
 from flask import jsonify
 from models import Business, Vendor, Customer, Order, ChatSession, ChatMessage, Product, Category
 from datetime import datetime, timedelta
-from sqlalchemy import func, and_, or_
+from mongoengine import Q
 import json
 
 logger = logging.getLogger(__name__)
@@ -15,11 +15,11 @@ class AnalyticsService:
         try:
             # Verify permissions
             if vendor_id:
-                business = Business.query.filter_by(id=business_id, vendor_id=vendor_id).first()
+                business = Business.objects(Q(id=business_id) & Q(vendor=vendor_id)).first()
                 if not business:
                     return {"error": "Business not found or access denied"}
             else:
-                business = Business.query.get(business_id)
+                business = Business.objects(id=business_id).first()
                 if not business:
                     return {"error": "Business not found"}
             
@@ -61,15 +61,15 @@ class AnalyticsService:
     def get_vendor_analytics(vendor_id, days=30):
         """Get analytics across all businesses for a vendor"""
         try:
-            vendor = Vendor.query.get(vendor_id)
+            vendor = Vendor.objects(id=vendor_id).first()
             if not vendor:
                 return {"error": "Vendor not found"}
             
             start_date = datetime.utcnow() - timedelta(days=days)
             
             # Get all businesses for this vendor
-            businesses = Business.query.filter_by(vendor_id=vendor_id, is_active=True).all()
-            business_ids = [b.id for b in businesses]
+            businesses = Business.objects(Q(vendor=vendor_id) & Q(is_active=True))
+            business_ids = [str(b.id) for b in businesses]
             
             if not business_ids:
                 return {
@@ -80,35 +80,27 @@ class AnalyticsService:
                 }
             
             # Aggregate analytics across all businesses
-            total_customers = db.session.query(func.count(func.distinct(Customer.id))).\
-                join(ChatSession, Customer.id == ChatSession.customer_id).\
-                filter(ChatSession.business_id.in_(business_ids)).scalar()
+            total_customers = ChatSession.objects(business__in=business_ids).distinct('customer').count()
             
-            recent_customers = db.session.query(func.count(func.distinct(Customer.id))).\
-                join(ChatSession, Customer.id == ChatSession.customer_id).\
-                filter(and_(
-                    ChatSession.business_id.in_(business_ids),
-                    ChatSession.created_at >= start_date
-                )).scalar()
+            recent_customers = ChatSession.objects(
+                Q(business__in=business_ids) & Q(created_at__gte=start_date)
+            ).distinct('customer').count()
             
-            total_orders = Order.query.filter(Order.business_id.in_(business_ids)).count()
-            recent_orders = Order.query.filter(and_(
-                Order.business_id.in_(business_ids),
-                Order.created_at >= start_date
-            )).count()
+            total_orders = Order.objects(business__in=business_ids).count()
+            recent_orders = Order.objects(
+                Q(business__in=business_ids) & Q(created_at__gte=start_date)
+            ).count()
             
-            total_revenue = db.session.query(func.sum(Order.total_amount)).\
-                filter(and_(
-                    Order.business_id.in_(business_ids),
-                    Order.payment_status == 'paid'
-                )).scalar() or 0
+            # Calculate total revenue
+            paid_orders = Order.objects(
+                Q(business__in=business_ids) & Q(payment_status='paid')
+            ).only('total_amount')
+            total_revenue = sum(order.total_amount for order in paid_orders)
             
-            recent_revenue = db.session.query(func.sum(Order.total_amount)).\
-                filter(and_(
-                    Order.business_id.in_(business_ids),
-                    Order.payment_status == 'paid',
-                    Order.created_at >= start_date
-                )).scalar() or 0
+            recent_paid_orders = Order.objects(
+                Q(business__in=business_ids) & Q(payment_status='paid') & Q(created_at__gte=start_date)
+            ).only('total_amount')
+            recent_revenue = sum(order.total_amount for order in recent_paid_orders)
             
             # Business performance breakdown
             business_performance = []
@@ -150,61 +142,67 @@ class AnalyticsService:
             start_date = datetime.utcnow() - timedelta(days=days)
             
             # Vendor Analytics
-            total_vendors = Vendor.query.filter_by(is_active=True).count()
-            recent_vendors = Vendor.query.filter(and_(
-                Vendor.is_active == True,
-                Vendor.created_at >= start_date
-            )).count()
+            total_vendors = Vendor.objects(is_active=True).count()
+            recent_vendors = Vendor.objects(
+                Q(is_active=True) & Q(created_at__gte=start_date)
+            ).count()
             
             # Business Analytics
-            total_businesses = Business.query.filter_by(is_active=True).count()
-            recent_businesses = Business.query.filter(and_(
-                Business.is_active == True,
-                Business.created_at >= start_date
-            )).count()
+            total_businesses = Business.objects(is_active=True).count()
+            recent_businesses = Business.objects(
+                Q(is_active=True) & Q(created_at__gte=start_date)
+            ).count()
             
             # Customer Analytics
-            total_customers = Customer.query.count()
-            recent_customers = Customer.query.filter(Customer.created_at >= start_date).count()
+            total_customers = Customer.objects().count()
+            recent_customers = Customer.objects(created_at__gte=start_date).count()
             
             # Order Analytics
-            total_orders = Order.query.count()
-            recent_orders = Order.query.filter(Order.created_at >= start_date).count()
-            paid_orders = Order.query.filter_by(payment_status='paid').count()
+            total_orders = Order.objects().count()
+            recent_orders = Order.objects(created_at__gte=start_date).count()
+            paid_orders = Order.objects(payment_status='paid').count()
             
             # Revenue Analytics
-            total_revenue = db.session.query(func.sum(Order.total_amount)).\
-                filter(Order.payment_status == 'paid').scalar() or 0
+            all_paid_orders = Order.objects(payment_status='paid').only('total_amount')
+            total_revenue = sum(order.total_amount for order in all_paid_orders)
             
-            recent_revenue = db.session.query(func.sum(Order.total_amount)).\
-                filter(and_(
-                    Order.payment_status == 'paid',
-                    Order.created_at >= start_date
-                )).scalar() or 0
+            recent_paid_orders = Order.objects(
+                Q(payment_status='paid') & Q(created_at__gte=start_date)
+            ).only('total_amount')
+            recent_revenue = sum(order.total_amount for order in recent_paid_orders)
             
             # Chat Analytics
-            total_chat_sessions = ChatSession.query.count()
-            recent_chat_sessions = ChatSession.query.filter(ChatSession.created_at >= start_date).count()
+            total_chat_sessions = ChatSession.objects().count()
+            recent_chat_sessions = ChatSession.objects(created_at__gte=start_date).count()
             
-            # Top performing businesses
-            top_businesses = db.session.query(
-                Business.id,
-                Business.name,
-                func.count(Order.id).label('order_count'),
-                func.sum(Order.total_amount).label('revenue')
-            ).join(Order, Business.id == Order.business_id).\
-            filter(Order.payment_status == 'paid').\
-            group_by(Business.id, Business.name).\
-            order_by(func.sum(Order.total_amount).desc()).\
-            limit(10).all()
+            # Top performing businesses using aggregation
+            pipeline = [
+                {"$match": {"payment_status": "paid"}},
+                {"$group": {
+                    "_id": "$business",
+                    "order_count": {"$sum": 1},
+                    "revenue": {"$sum": "$total_amount"}
+                }},
+                {"$sort": {"revenue": -1}},
+                {"$limit": 10},
+                {"$lookup": {
+                    "from": "businesses",
+                    "localField": "_id",
+                    "foreignField": "_id",
+                    "as": "business_info"
+                }},
+                {"$unwind": "$business_info"}
+            ]
+            
+            top_businesses_data = list(Order.objects.aggregate(pipeline))
             
             top_businesses_list = []
-            for business in top_businesses:
+            for business in top_businesses_data:
                 top_businesses_list.append({
-                    "business_id": business.id,
-                    "business_name": business.name,
-                    "order_count": business.order_count,
-                    "revenue": float(business.revenue or 0)
+                    "business_id": str(business["_id"]),
+                    "business_name": business["business_info"].get("name", ""),
+                    "order_count": business["order_count"],
+                    "revenue": float(business["revenue"])
                 })
             
             return {
@@ -237,24 +235,20 @@ class AnalyticsService:
         """Get customer analytics for a business"""
         try:
             # Total customers who have chatted with this business
-            total_customers = db.session.query(func.count(func.distinct(Customer.id))).\
-                join(ChatSession, Customer.id == ChatSession.customer_id).\
-                filter(ChatSession.business_id == business_id).scalar()
+            total_customers = ChatSession.objects(business=business_id).distinct('customer').count()
             
             # Recent customers
-            recent_customers = db.session.query(func.count(func.distinct(Customer.id))).\
-                join(ChatSession, Customer.id == ChatSession.customer_id).\
-                filter(and_(
-                    ChatSession.business_id == business_id,
-                    ChatSession.created_at >= start_date
-                )).scalar()
+            recent_customers = ChatSession.objects(
+                Q(business=business_id) & Q(created_at__gte=start_date)
+            ).distinct('customer').count()
             
             # Returning customers (customers with multiple chat sessions)
-            returning_customers = db.session.query(func.count(func.distinct(Customer.id))).\
-                join(ChatSession, Customer.id == ChatSession.customer_id).\
-                filter(ChatSession.business_id == business_id).\
-                group_by(Customer.id).\
-                having(func.count(ChatSession.id) > 1).count()
+            customer_sessions = ChatSession.objects(business=business_id).aggregate([
+                {"$group": {"_id": "$customer", "session_count": {"$sum": 1}}},
+                {"$match": {"session_count": {"$gt": 1}}},
+                {"$count": "returning_customers"}
+            ])
+            returning_customers = list(customer_sessions)[0].get('returning_customers', 0) if list(customer_sessions) else 0
             
             return {
                 "total_customers": total_customers,
@@ -271,33 +265,32 @@ class AnalyticsService:
     def _get_order_analytics(business_id, start_date):
         """Get order analytics for a business"""
         try:
-            total_orders = Order.query.filter_by(business_id=business_id).count()
-            recent_orders = Order.query.filter(and_(
-                Order.business_id == business_id,
-                Order.created_at >= start_date
-            )).count()
+            total_orders = Order.objects(business=business_id).count()
+            recent_orders = Order.objects(
+                Q(business=business_id) & Q(created_at__gte=start_date)
+            ).count()
             
-            paid_orders = Order.query.filter(and_(
-                Order.business_id == business_id,
-                Order.payment_status == 'paid'
-            )).count()
+            paid_orders = Order.objects(
+                Q(business=business_id) & Q(payment_status='paid')
+            ).count()
             
-            pending_orders = Order.query.filter(and_(
-                Order.business_id == business_id,
-                Order.payment_status == 'pending'
-            )).count()
+            pending_orders = Order.objects(
+                Q(business=business_id) & Q(payment_status='pending')
+            ).count()
             
-            cancelled_orders = Order.query.filter(and_(
-                Order.business_id == business_id,
-                Order.status == 'cancelled'
-            )).count()
+            cancelled_orders = Order.objects(
+                Q(business=business_id) & Q(status='cancelled')
+            ).count()
             
             # Average order value
-            avg_order_value = db.session.query(func.avg(Order.total_amount)).\
-                filter(and_(
-                    Order.business_id == business_id,
-                    Order.payment_status == 'paid'
-                )).scalar() or 0
+            paid_orders_list = Order.objects(
+                Q(business=business_id) & Q(payment_status='paid')
+            ).only('total_amount')
+            
+            if paid_orders_list:
+                avg_order_value = sum(order.total_amount for order in paid_orders_list) / len(paid_orders_list)
+            else:
+                avg_order_value = 0
             
             return {
                 "total_orders": total_orders,
@@ -319,28 +312,39 @@ class AnalyticsService:
         try:
             from models import OrderItem
             
-            total_products = Product.query.filter_by(business_id=business_id, is_active=True).count()
+            total_products = Product.objects(Q(business=business_id) & Q(is_active=True)).count()
             
-            # Best selling products
-            best_sellers = db.session.query(
-                Product.name,
-                func.sum(OrderItem.quantity).label('total_sold'),
-                func.sum(OrderItem.total_price).label('total_revenue')
-            ).join(OrderItem, Product.id == OrderItem.product_id).\
-            join(Order, OrderItem.order_id == Order.id).\
-            filter(and_(
-                Product.business_id == business_id,
-                Order.payment_status == 'paid'
-            )).group_by(Product.id, Product.name).\
-            order_by(func.sum(OrderItem.quantity).desc()).\
-            limit(5).all()
+            # Best selling products - using aggregation pipeline
+            pipeline = [
+                {"$match": {"business": business_id}},
+                {"$lookup": {
+                    "from": "orders",
+                    "localField": "_id", 
+                    "foreignField": "items.product",
+                    "as": "orders"
+                }},
+                {"$unwind": "$orders"},
+                {"$match": {"orders.payment_status": "paid"}},
+                {"$unwind": "$orders.items"},
+                {"$match": {"orders.items.product": {"$exists": True}}},
+                {"$group": {
+                    "_id": "$_id",
+                    "product_name": {"$first": "$name"},
+                    "total_sold": {"$sum": "$orders.items.quantity"},
+                    "total_revenue": {"$sum": "$orders.items.total_price"}
+                }},
+                {"$sort": {"total_sold": -1}},
+                {"$limit": 5}
+            ]
+            
+            best_sellers_data = list(Product.objects.aggregate(pipeline))
             
             best_sellers_list = []
-            for product in best_sellers:
+            for product in best_sellers_data:
                 best_sellers_list.append({
-                    "product_name": product.name,
-                    "total_sold": product.total_sold,
-                    "total_revenue": float(product.total_revenue)
+                    "product_name": product.get("product_name", ""),
+                    "total_sold": product.get("total_sold", 0),
+                    "total_revenue": float(product.get("total_revenue", 0))
                 })
             
             return {
@@ -356,22 +360,22 @@ class AnalyticsService:
     def _get_chat_analytics(business_id, start_date):
         """Get chat analytics for a business"""
         try:
-            total_sessions = ChatSession.query.filter_by(business_id=business_id).count()
-            recent_sessions = ChatSession.query.filter(and_(
-                ChatSession.business_id == business_id,
-                ChatSession.created_at >= start_date
-            )).count()
+            total_sessions = ChatSession.objects(business=business_id).count()
+            recent_sessions = ChatSession.objects(
+                Q(business=business_id) & Q(created_at__gte=start_date)
+            ).count()
             
-            total_messages = db.session.query(func.count(ChatMessage.id)).\
-                join(ChatSession, ChatMessage.session_id == ChatSession.id).\
-                filter(ChatSession.business_id == business_id).scalar()
+            # Count total messages
+            total_messages = 0
+            for session in ChatSession.objects(business=business_id).only('id'):
+                total_messages += ChatMessage.objects(session=session.id).count()
             
-            recent_messages = db.session.query(func.count(ChatMessage.id)).\
-                join(ChatSession, ChatMessage.session_id == ChatSession.id).\
-                filter(and_(
-                    ChatSession.business_id == business_id,
-                    ChatMessage.timestamp >= start_date
-                )).scalar()
+            # Count recent messages
+            recent_messages = 0
+            for session in ChatSession.objects(business=business_id).only('id'):
+                recent_messages += ChatMessage.objects(
+                    Q(session=session.id) & Q(timestamp__gte=start_date)
+                ).count()
             
             # Average messages per session
             avg_messages_per_session = (total_messages / total_sessions) if total_sessions > 0 else 0
@@ -392,35 +396,44 @@ class AnalyticsService:
     def _get_revenue_analytics(business_id, start_date):
         """Get revenue analytics for a business"""
         try:
-            total_revenue = db.session.query(func.sum(Order.total_amount)).\
-                filter(and_(
-                    Order.business_id == business_id,
-                    Order.payment_status == 'paid'
-                )).scalar() or 0
+            # Calculate total revenue
+            paid_orders = Order.objects(
+                Q(business=business_id) & Q(payment_status='paid')
+            ).only('total_amount')
+            total_revenue = sum(order.total_amount for order in paid_orders)
             
-            recent_revenue = db.session.query(func.sum(Order.total_amount)).\
-                filter(and_(
-                    Order.business_id == business_id,
-                    Order.payment_status == 'paid',
-                    Order.created_at >= start_date
-                )).scalar() or 0
+            # Calculate recent revenue
+            recent_paid_orders = Order.objects(
+                Q(business=business_id) & Q(payment_status='paid') & Q(created_at__gte=start_date)
+            ).only('total_amount')
+            recent_revenue = sum(order.total_amount for order in recent_paid_orders)
             
-            # Revenue by day for the recent period
-            daily_revenue = db.session.query(
-                func.date(Order.created_at).label('date'),
-                func.sum(Order.total_amount).label('revenue')
-            ).filter(and_(
-                Order.business_id == business_id,
-                Order.payment_status == 'paid',
-                Order.created_at >= start_date
-            )).group_by(func.date(Order.created_at)).\
-            order_by(func.date(Order.created_at)).all()
+            # Revenue by day for the recent period using aggregation
+            pipeline = [
+                {"$match": {
+                    "business": business_id,
+                    "payment_status": "paid",
+                    "created_at": {"$gte": start_date}
+                }},
+                {"$group": {
+                    "_id": {
+                        "$dateToString": {
+                            "format": "%Y-%m-%d",
+                            "date": "$created_at"
+                        }
+                    },
+                    "revenue": {"$sum": "$total_amount"}
+                }},
+                {"$sort": {"_id": 1}}
+            ]
+            
+            daily_revenue_data = list(Order.objects.aggregate(pipeline))
             
             daily_revenue_list = []
-            for day in daily_revenue:
+            for day in daily_revenue_data:
                 daily_revenue_list.append({
-                    "date": day.date.isoformat(),
-                    "revenue": float(day.revenue)
+                    "date": day["_id"],
+                    "revenue": float(day["revenue"])
                 })
             
             return {
@@ -439,7 +452,7 @@ class AnalyticsService:
         try:
             # Verify permissions
             if vendor_id:
-                business = Business.query.filter_by(id=business_id, vendor_id=vendor_id).first()
+                business = Business.objects(Q(id=business_id) & Q(vendor=vendor_id)).first()
                 if not business:
                     return {"error": "Business not found or access denied"}
             
@@ -473,24 +486,24 @@ class AnalyticsService:
     def _export_orders(business_id, start_date, end_date):
         """Export orders data"""
         try:
-            orders = Order.query.filter(and_(
-                Order.business_id == business_id,
-                Order.created_at >= start_date,
-                Order.created_at <= end_date
-            )).all()
+            orders = Order.objects(
+                Q(business=business_id) & 
+                Q(created_at__gte=start_date) & 
+                Q(created_at__lte=end_date)
+            )
             
             export_data = []
             for order in orders:
                 export_data.append({
                     "order_number": order.order_number,
-                    "customer_phone": order.customer.phone_number,
-                    "customer_name": order.customer.name or '',
+                    "customer_phone": order.customer.phone_number if order.customer else '',
+                    "customer_name": order.customer.name if order.customer and order.customer.name else '',
                     "total_amount": order.total_amount,
                     "status": order.status,
                     "payment_status": order.payment_status,
-                    "payment_method": order.payment_method,
+                    "payment_method": order.payment_method if hasattr(order, 'payment_method') else '',
                     "created_at": order.created_at.isoformat(),
-                    "customization_notes": order.customization_notes or ''
+                    "customization_notes": order.customization_notes if hasattr(order, 'customization_notes') else ''
                 })
             
             return {"success": True, "data": export_data}
@@ -504,41 +517,45 @@ class AnalyticsService:
         """Export customers data"""
         try:
             # Get customers who have chatted with this business in the date range
-            customers = db.session.query(Customer).\
-                join(ChatSession, Customer.id == ChatSession.customer_id).\
-                filter(and_(
-                    ChatSession.business_id == business_id,
-                    ChatSession.created_at >= start_date,
-                    ChatSession.created_at <= end_date
-                )).distinct().all()
+            chat_sessions = ChatSession.objects(
+                Q(business=business_id) & 
+                Q(created_at__gte=start_date) & 
+                Q(created_at__lte=end_date)
+            ).distinct('customer')
+            
+            customer_ids = [session.customer.id for session in ChatSession.objects(
+                Q(business=business_id) & 
+                Q(created_at__gte=start_date) & 
+                Q(created_at__lte=end_date)
+            ).only('customer')]
+            
+            customers = Customer.objects(id__in=customer_ids)
             
             export_data = []
             for customer in customers:
                 # Get chat and order statistics
-                chat_sessions = ChatSession.query.filter_by(
-                    business_id=business_id,
-                    customer_id=customer.id
+                chat_sessions_count = ChatSession.objects(
+                    Q(business=business_id) & Q(customer=customer.id)
                 ).count()
                 
-                orders = Order.query.filter_by(
-                    business_id=business_id,
-                    customer_id=customer.id
+                orders_count = Order.objects(
+                    Q(business=business_id) & Q(customer=customer.id)
                 ).count()
                 
-                total_spent = db.session.query(func.sum(Order.total_amount)).\
-                    filter(and_(
-                        Order.business_id == business_id,
-                        Order.customer_id == customer.id,
-                        Order.payment_status == 'paid'
-                    )).scalar() or 0
+                paid_orders = Order.objects(
+                    Q(business=business_id) & 
+                    Q(customer=customer.id) & 
+                    Q(payment_status='paid')
+                ).only('total_amount')
+                total_spent = sum(order.total_amount for order in paid_orders)
                 
                 export_data.append({
                     "phone_number": customer.phone_number,
                     "name": customer.name or '',
                     "email": customer.email or '',
                     "created_at": customer.created_at.isoformat(),
-                    "chat_sessions": chat_sessions,
-                    "orders": orders,
+                    "chat_sessions": chat_sessions_count,
+                    "orders": orders_count,
                     "total_spent": float(total_spent)
                 })
             
@@ -554,34 +571,53 @@ class AnalyticsService:
         try:
             from models import OrderItem
             
-            products = Product.query.filter_by(business_id=business_id).all()
+            products = Product.objects(business=business_id)
             
             export_data = []
             for product in products:
-                # Get sales data for the period
-                sales_data = db.session.query(
-                    func.sum(OrderItem.quantity).label('total_sold'),
-                    func.sum(OrderItem.total_price).label('total_revenue'),
-                    func.count(func.distinct(Order.customer_id)).label('unique_customers')
-                ).join(Order, OrderItem.order_id == Order.id).\
-                filter(and_(
-                    OrderItem.product_id == product.id,
-                    Order.payment_status == 'paid',
-                    Order.created_at >= start_date,
-                    Order.created_at <= end_date
-                )).first()
+                # Get sales data for the period using aggregation
+                pipeline = [
+                    {"$match": {
+                        "business": business_id,
+                        "payment_status": "paid",
+                        "created_at": {"$gte": start_date, "$lte": end_date}
+                    }},
+                    {"$unwind": "$items"},
+                    {"$match": {"items.product": str(product.id)}},
+                    {"$group": {
+                        "_id": None,
+                        "total_sold": {"$sum": "$items.quantity"},
+                        "total_revenue": {"$sum": "$items.total_price"},
+                        "unique_customers": {"$addToSet": "$customer"}
+                    }},
+                    {"$project": {
+                        "total_sold": 1,
+                        "total_revenue": 1,
+                        "unique_customers": {"$size": "$unique_customers"}
+                    }}
+                ]
+                
+                sales_data = list(Order.objects.aggregate(pipeline))
+                
+                if sales_data:
+                    data = sales_data[0]
+                    total_sold = data.get('total_sold', 0)
+                    total_revenue = data.get('total_revenue', 0)
+                    unique_customers = data.get('unique_customers', 0)
+                else:
+                    total_sold = total_revenue = unique_customers = 0
                 
                 export_data.append({
-                    "product_id": product.product_id,
+                    "product_id": product.product_id if hasattr(product, 'product_id') else str(product.id),
                     "product_name": product.name,
                     "category": product.category.name if product.category else '',
                     "price": product.price,
                     "is_active": product.is_active,
-                    "allows_customization": product.allows_customization,
-                    "has_variations": product.has_variations,
-                    "total_sold": sales_data.total_sold or 0,
-                    "total_revenue": float(sales_data.total_revenue or 0),
-                    "unique_customers": sales_data.unique_customers or 0,
+                    "allows_customization": product.allows_customization if hasattr(product, 'allows_customization') else False,
+                    "has_variations": product.has_variations if hasattr(product, 'has_variations') else False,
+                    "total_sold": total_sold,
+                    "total_revenue": float(total_revenue),
+                    "unique_customers": unique_customers,
                     "created_at": product.created_at.isoformat()
                 })
             
@@ -595,20 +631,20 @@ class AnalyticsService:
     def _export_chats(business_id, start_date, end_date):
         """Export chat sessions data"""
         try:
-            chat_sessions = ChatSession.query.filter(and_(
-                ChatSession.business_id == business_id,
-                ChatSession.created_at >= start_date,
-                ChatSession.created_at <= end_date
-            )).all()
+            chat_sessions = ChatSession.objects(
+                Q(business=business_id) & 
+                Q(created_at__gte=start_date) & 
+                Q(created_at__lte=end_date)
+            )
             
             export_data = []
             for session in chat_sessions:
-                message_count = ChatMessage.query.filter_by(session_id=session.id).count()
+                message_count = ChatMessage.objects(session=session.id).count()
                 
                 export_data.append({
-                    "session_id": session.session_id,
-                    "customer_phone": session.customer.phone_number,
-                    "customer_name": session.customer.name or '',
+                    "session_id": session.session_id if hasattr(session, 'session_id') else str(session.id),
+                    "customer_phone": session.customer.phone_number if session.customer else '',
+                    "customer_name": session.customer.name if session.customer and session.customer.name else '',
                     "created_at": session.created_at.isoformat(),
                     "message_count": message_count
                 })
