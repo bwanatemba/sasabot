@@ -304,6 +304,12 @@ def analytics():
         days = request.args.get('days', 30, type=int)
         
         from services.analytics_service import AnalyticsService
+        
+        # Check service health first
+        health = AnalyticsService.health_check()
+        if health.get('status') != 'healthy':
+            flash(f'Database connection issue: {health.get("message", "Unknown error")}', 'warning')
+        
         analytics_data = AnalyticsService.get_admin_analytics(days)
         
         # Check if analytics data has an error

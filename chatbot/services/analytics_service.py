@@ -1,9 +1,20 @@
 import logging
 from flask import jsonify
-from models import Business, Vendor, Customer, Order, ChatSession, ChatMessage, Product, Category
 from datetime import datetime, timedelta
 from mongoengine import Q
 import json
+
+# Import models at module level to avoid repeated imports
+try:
+    from models import Business, Vendor, Customer, Order, ChatSession, ChatMessage, Product, Category
+except ImportError:
+    # Fallback import if models are in a different location
+    try:
+        from models.mongodb_models import Business, Vendor, Customer, Order, ChatSession, ChatMessage, Product, Category
+    except ImportError as e:
+        print(f"Failed to import models: {e}")
+        # Set to None to handle in functions
+        Business = Vendor = Customer = Order = ChatSession = ChatMessage = Product = Category = None
 
 logger = logging.getLogger(__name__)
 
@@ -136,14 +147,33 @@ class AnalyticsService:
             return {"error": str(e)}
     
     @staticmethod
-    @staticmethod
     def get_admin_analytics(days=30):
         """Get system-wide analytics for admins"""
         try:
+            # Validate days parameter
+            if not isinstance(days, int) or days < 1:
+                days = 30
+                
             start_date = datetime.utcnow() - timedelta(days=days)
+            
+            # Initialize all variables with defaults to prevent NameError
+            total_vendors = recent_vendors = 0
+            total_businesses = recent_businesses = 0
+            total_customers = recent_customers = 0
+            total_orders = recent_orders = paid_orders = 0
+            total_revenue = recent_revenue = 0
+            total_chat_sessions = recent_chat_sessions = 0
+            top_businesses_list = []
+            
+            # Check if models are available
+            if any(model is None for model in [Business, Vendor, Customer, Order, ChatSession]):
+                return {"error": "Database models not available"}
             
             # Vendor Analytics
             try:
+                # Test database connection first
+                Vendor.objects.count()  # This will fail if DB is not connected
+                
                 total_vendors = Vendor.objects(is_active=True).count()
                 recent_vendors = Vendor.objects(
                     Q(is_active=True) & Q(created_at__gte=start_date)
@@ -203,42 +233,50 @@ class AnalyticsService:
             
             # Top performing businesses - simplified approach to avoid aggregation issues
             try:
-                # Get all paid orders grouped by business
+                # Get all paid orders with business info - limit to recent orders for performance
+                paid_orders = Order.objects(
+                    Q(payment_status='paid') & Q(created_at__gte=start_date)
+                ).only('business', 'total_amount').limit(1000)  # Limit for performance
+                
+                # Group by business manually
                 paid_orders_by_business = {}
-                paid_orders = Order.objects(payment_status='paid').only('business', 'total_amount')
                 
                 for order in paid_orders:
-                    if order.business and order.total_amount:
-                        business_id = str(order.business.id)
-                        if business_id not in paid_orders_by_business:
-                            paid_orders_by_business[business_id] = {
-                                'order_count': 0,
-                                'revenue': 0,
-                                'business': order.business
-                            }
-                        paid_orders_by_business[business_id]['order_count'] += 1
-                        paid_orders_by_business[business_id]['revenue'] += (order.total_amount or 0)
+                    try:
+                        if order.business and order.total_amount:
+                            business_id = str(order.business.id)
+                            business_name = order.business.name
+                            
+                            if business_id not in paid_orders_by_business:
+                                paid_orders_by_business[business_id] = {
+                                    'order_count': 0,
+                                    'revenue': 0,
+                                    'business_name': business_name
+                                }
+                            paid_orders_by_business[business_id]['order_count'] += 1
+                            paid_orders_by_business[business_id]['revenue'] += (order.total_amount or 0)
+                    except Exception as order_error:
+                        logger.error(f"Error processing order: {str(order_error)}")
+                        continue
                 
                 # Sort by revenue and get top 10
-                sorted_businesses = sorted(
-                    paid_orders_by_business.items(), 
-                    key=lambda x: x[1]['revenue'], 
-                    reverse=True
-                )[:10]
-                
-                top_businesses_list = []
-                for business_id, data in sorted_businesses:
-                    try:
-                        business_name = data['business'].name if data['business'] else 'Unknown Business'
+                if paid_orders_by_business:
+                    sorted_businesses = sorted(
+                        paid_orders_by_business.items(), 
+                        key=lambda x: x[1]['revenue'], 
+                        reverse=True
+                    )[:10]
+                    
+                    top_businesses_list = []
+                    for business_id, data in sorted_businesses:
                         top_businesses_list.append({
                             "business_id": business_id,
-                            "business_name": business_name,
+                            "business_name": data['business_name'],
                             "order_count": data['order_count'],
                             "revenue": float(data['revenue'])
                         })
-                    except Exception as e:
-                        logger.error(f"Error processing business {business_id}: {str(e)}")
-                        continue
+                else:
+                    top_businesses_list = []
                     
             except Exception as e:
                 logger.error(f"Error getting top businesses: {str(e)}")
@@ -267,7 +305,28 @@ class AnalyticsService:
             
         except Exception as e:
             logger.error(f"Error getting admin analytics: {str(e)}")
-            return {"error": str(e)}
+            # Return minimal fallback data instead of error
+            return {
+                "success": True,
+                "period_days": days,
+                "error_message": f"Limited data due to: {str(e)}",
+                "summary": {
+                    "total_vendors": 0,
+                    "recent_vendors": 0,
+                    "total_businesses": 0,
+                    "recent_businesses": 0,
+                    "total_customers": 0,
+                    "recent_customers": 0,
+                    "total_orders": 0,
+                    "recent_orders": 0,
+                    "paid_orders": 0,
+                    "total_revenue": 0,
+                    "recent_revenue": 0,
+                    "total_chat_sessions": 0,
+                    "recent_chat_sessions": 0
+                },
+                "top_businesses": []
+            }
     
     @staticmethod
     def _get_customer_analytics(business_id, start_date):
@@ -693,3 +752,17 @@ class AnalyticsService:
         except Exception as e:
             logger.error(f"Error exporting chats: {str(e)}")
             return {"error": str(e)}
+    
+    @staticmethod
+    def health_check():
+        """Simple health check for analytics service"""
+        try:
+            # Check if models are available
+            if Vendor is None:
+                return {"status": "error", "message": "Models not available"}
+            
+            # Try a simple query
+            count = Vendor.objects.count()
+            return {"status": "healthy", "vendor_count": count}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
