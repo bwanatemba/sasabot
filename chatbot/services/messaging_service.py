@@ -987,7 +987,9 @@ def show_order_confirmation(phone_number, order_id):
             {"text": "❌ Cancel", "id": f"cancel_order_{order.id}"}
         ]
         
-        if order.business.products[0].allows_customization:
+        # Check if any product in the order allows customization
+        has_customizable_product = any(item.product.allows_customization for item in order.order_items)
+        if has_customizable_product:
             buttons.insert(1, {"text": "🎨 Add Customization", "id": f"customize_{order.order_items[0].product.id}"})
         
         return send_whatsapp_interactive_message(

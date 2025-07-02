@@ -138,21 +138,21 @@
                         </div>
                         
                         <!-- Business Statistics (Read-only) -->
-                        {% if business.products or business.orders or business.categories %}
+                        {% if (business|product_count) > 0 or (business|order_count) > 0 or (business|category_count) > 0 %}
                         <div class="card bg-light mb-4">
                             <div class="card-body">
                                 <h6 class="card-title">Business Statistics</h6>
                                 <div class="row text-center">
                                     <div class="col-md-3">
-                                        <h5 class="text-primary mb-0">{{ business.products|length }}</h5>
+                                        <h5 class="text-primary mb-0">{{ business|product_count }}</h5>
                                         <small class="text-muted">Products</small>
                                     </div>
                                     <div class="col-md-3">
-                                        <h5 class="text-success mb-0">{{ business.orders|length }}</h5>
+                                        <h5 class="text-success mb-0">{{ business|order_count }}</h5>
                                         <small class="text-muted">Orders</small>
                                     </div>
                                     <div class="col-md-3">
-                                        <h5 class="text-info mb-0">{{ business.categories|length }}</h5>
+                                        <h5 class="text-info mb-0">{{ business|category_count }}</h5>
                                         <small class="text-muted">Categories</small>
                                     </div>
                                     <div class="col-md-3">

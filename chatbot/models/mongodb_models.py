@@ -56,6 +56,24 @@ class Business(Document):
     
     # Custom instructions for OpenAI
     custom_instructions = fields.StringField()
+    
+    @property
+    def products(self):
+        """Get all products for this business"""
+        # Use string reference to avoid circular import
+        return Product.objects(business=self)
+    
+    @property
+    def orders(self):
+        """Get all orders for this business"""
+        # Forward reference will be resolved at runtime
+        return Order.objects(business=self)
+    
+    @property  
+    def categories(self):
+        """Get all categories for this business"""
+        # Forward reference will be resolved at runtime
+        return Category.objects(business=self)
 
 class Category(Document):
     meta = {'collection': 'categories'}
@@ -64,6 +82,11 @@ class Category(Document):
     description = fields.StringField()
     business = fields.ReferenceField(Business, required=True)
     created_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    @property
+    def products(self):
+        """Get all products in this category"""
+        return Product.objects(category=self)
 
 class ProductVariation(EmbeddedDocument):
     variation_id = fields.StringField(required=True, max_length=20)

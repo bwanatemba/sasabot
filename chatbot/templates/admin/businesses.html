@@ -75,15 +75,15 @@
                         <div class="row text-center mb-3">
                             <div class="col-4">
                                 <small class="text-muted">Products</small><br>
-                                <strong class="text-primary">{{ business.products|length }}</strong>
+                                <strong class="text-primary">{{ business|product_count }}</strong>
                             </div>
                             <div class="col-4">
                                 <small class="text-muted">Orders</small><br>
-                                <strong class="text-success">{{ business.orders|length }}</strong>
+                                <strong class="text-success">{{ business|order_count }}</strong>
                             </div>
                             <div class="col-4">
                                 <small class="text-muted">Categories</small><br>
-                                <strong class="text-info">{{ business.categories|length }}</strong>
+                                <strong class="text-info">{{ business|category_count }}</strong>
                             </div>
                         </div>
                         

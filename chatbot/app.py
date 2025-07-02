@@ -110,6 +110,31 @@ def create_app():
     def inject_current_user():
         return dict(current_user=current_user)
     
+    # Custom template filters
+    @app.template_filter('product_count')
+    def product_count_filter(business):
+        """Get the count of products for a business"""
+        from models import Product
+        return Product.objects(business=business).count()
+    
+    @app.template_filter('order_count')
+    def order_count_filter(business):
+        """Get the count of orders for a business"""
+        from models import Order
+        return Order.objects(business=business).count()
+    
+    @app.template_filter('category_count')
+    def category_count_filter(business):
+        """Get the count of categories for a business"""
+        from models import Category
+        return Category.objects(business=business).count()
+    
+    @app.template_filter('category_products')
+    def category_products_filter(category):
+        """Get products for a category"""
+        from models import Product
+        return Product.objects(category=category)
+    
     # Register error handlers
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):

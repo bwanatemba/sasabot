@@ -58,7 +58,7 @@
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h6 class="card-title mb-0">{{ category.name }}</h6>
-                        <span class="badge bg-primary">{{ category.products|length }} products</span>
+                        <span class="badge bg-primary">{{ (category|category_products)|length }} products</span>
                     </div>
                     <div class="card-body">
                         {% if category.description %}
@@ -68,15 +68,16 @@
                         {% endif %}
                         
                         <!-- Category Products -->
-                        {% if category.products %}
+                        {% set category_products = category|category_products %}
+                        {% if category_products %}
                         <div class="mb-3">
                             <small class="text-muted">Products in this category:</small>
                             <div class="mt-1">
-                                {% for product in category.products[:3] %}
+                                {% for product in category_products[:3] %}
                                 <span class="badge bg-light text-dark me-1 mb-1">{{ product.name }}</span>
                                 {% endfor %}
-                                {% if category.products|length > 3 %}
-                                <span class="badge bg-secondary">+{{ category.products|length - 3 }} more</span>
+                                {% if category_products|length > 3 %}
+                                <span class="badge bg-secondary">+{{ category_products|length - 3 }} more</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -97,7 +98,7 @@
                                    class="btn btn-sm btn-outline-info me-1">
                                     <i class="fas fa-eye"></i> View Products
                                 </a>
-                                {% if category.products|length == 0 %}
+                                {% if (category|category_products)|length == 0 %}
                                 <button type="button" class="btn btn-sm btn-outline-danger" 
                                         onclick="deleteCategory({{ category.id }}, '{{ category.name }}')">
                                     <i class="fas fa-trash"></i>

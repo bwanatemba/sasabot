@@ -59,7 +59,16 @@ def vendor_detail(vendor_id):
             return redirect(url_for('admin.vendors'))
             
         businesses = Business.objects(vendor=vendor)
-        return render_template('admin/vendor_detail.html', vendor=vendor, businesses=businesses)
+        
+        # Calculate total products for this vendor
+        total_products = 0
+        for business in businesses:
+            total_products += Product.objects(business=business).count()
+            
+        return render_template('admin/vendor_detail.html', 
+                             vendor=vendor, 
+                             businesses=businesses,
+                             total_products=total_products)
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('admin.vendors'))
