@@ -133,7 +133,7 @@ def create_app():
     def category_products_filter(category):
         """Get products for a category"""
         from models import Product
-        return Product.objects(category=category)
+        return list(Product.objects(category=category))
     
     @app.template_filter('total_messages')
     def total_messages_filter(sessions):

@@ -136,6 +136,16 @@ class AnalyticsService:
                 Q(business__in=business_ids) & Q(created_at__gte=start_date)
             ).count()
             
+            # Ensure all counts are integers
+            if not isinstance(total_customers, int):
+                total_customers = int(total_customers) if total_customers is not None else 0
+            if not isinstance(recent_customers, int):
+                recent_customers = int(recent_customers) if recent_customers is not None else 0
+            if not isinstance(total_orders, int):
+                total_orders = int(total_orders) if total_orders is not None else 0
+            if not isinstance(recent_orders, int):
+                recent_orders = int(recent_orders) if recent_orders is not None else 0
+
             # Calculate total revenue and count paid orders
             paid_orders_queryset = Order.objects(
                 Q(business__in=business_ids) & Q(payment_status='paid')
@@ -215,6 +225,13 @@ class AnalyticsService:
                 recent_vendors = Vendor.objects(
                     Q(is_active=True) & Q(created_at__gte=start_date)
                 ).count()
+                
+                # Ensure all values are integers
+                if not isinstance(total_vendors, int):
+                    total_vendors = int(total_vendors) if total_vendors is not None else 0
+                if not isinstance(recent_vendors, int):
+                    recent_vendors = int(recent_vendors) if recent_vendors is not None else 0
+                    
             except Exception as e:
                 logger.error(f"Error getting vendor analytics: {str(e)}")
                 total_vendors = recent_vendors = 0
@@ -225,6 +242,13 @@ class AnalyticsService:
                 recent_businesses = Business.objects(
                     Q(is_active=True) & Q(created_at__gte=start_date)
                 ).count()
+                
+                # Ensure all values are integers
+                if not isinstance(total_businesses, int):
+                    total_businesses = int(total_businesses) if total_businesses is not None else 0
+                if not isinstance(recent_businesses, int):
+                    recent_businesses = int(recent_businesses) if recent_businesses is not None else 0
+                    
             except Exception as e:
                 logger.error(f"Error getting business analytics: {str(e)}")
                 total_businesses = recent_businesses = 0
@@ -233,6 +257,13 @@ class AnalyticsService:
             try:
                 total_customers = Customer.objects().count()
                 recent_customers = Customer.objects(created_at__gte=start_date).count()
+                
+                # Ensure all values are integers
+                if not isinstance(total_customers, int):
+                    total_customers = int(total_customers) if total_customers is not None else 0
+                if not isinstance(recent_customers, int):
+                    recent_customers = int(recent_customers) if recent_customers is not None else 0
+                    
             except Exception as e:
                 logger.error(f"Error getting customer analytics: {str(e)}")
                 total_customers = recent_customers = 0
@@ -242,6 +273,15 @@ class AnalyticsService:
                 total_orders = Order.objects().count()
                 recent_orders = Order.objects(created_at__gte=start_date).count()
                 paid_orders = Order.objects(payment_status='paid').count()
+                
+                # Ensure all values are integers
+                if not isinstance(total_orders, int):
+                    total_orders = int(total_orders) if total_orders is not None else 0
+                if not isinstance(recent_orders, int):
+                    recent_orders = int(recent_orders) if recent_orders is not None else 0
+                if not isinstance(paid_orders, int):
+                    paid_orders = int(paid_orders) if paid_orders is not None else 0
+                    
             except Exception as e:
                 logger.error(f"Error getting order analytics: {str(e)}")
                 total_orders = recent_orders = paid_orders = 0
@@ -264,6 +304,13 @@ class AnalyticsService:
             try:
                 total_chat_sessions = ChatSession.objects().count()
                 recent_chat_sessions = ChatSession.objects(created_at__gte=start_date).count()
+                
+                # Ensure all values are integers
+                if not isinstance(total_chat_sessions, int):
+                    total_chat_sessions = int(total_chat_sessions) if total_chat_sessions is not None else 0
+                if not isinstance(recent_chat_sessions, int):
+                    recent_chat_sessions = int(recent_chat_sessions) if recent_chat_sessions is not None else 0
+                    
             except Exception as e:
                 logger.error(f"Error getting chat analytics: {str(e)}")
                 total_chat_sessions = recent_chat_sessions = 0
@@ -377,13 +424,25 @@ class AnalyticsService:
                 Q(business=business_id) & Q(created_at__gte=start_date)
             ).distinct('customer').count()
             
+            # Ensure all values are integers
+            if not isinstance(total_customers, int):
+                total_customers = int(total_customers) if total_customers is not None else 0
+            if not isinstance(recent_customers, int):
+                recent_customers = int(recent_customers) if recent_customers is not None else 0
+            
             # Returning customers (customers with multiple chat sessions)
-            customer_sessions = ChatSession.objects(business=business_id).aggregate([
-                {"$group": {"_id": "$customer", "session_count": {"$sum": 1}}},
-                {"$match": {"session_count": {"$gt": 1}}},
-                {"$count": "returning_customers"}
-            ])
-            returning_customers = list(customer_sessions)[0].get('returning_customers', 0) if list(customer_sessions) else 0
+            try:
+                customer_sessions = ChatSession.objects(business=business_id).aggregate([
+                    {"$group": {"_id": "$customer", "session_count": {"$sum": 1}}},
+                    {"$match": {"session_count": {"$gt": 1}}},
+                    {"$count": "returning_customers"}
+                ])
+                returning_customers = list(customer_sessions)[0].get('returning_customers', 0) if list(customer_sessions) else 0
+                if not isinstance(returning_customers, int):
+                    returning_customers = int(returning_customers) if returning_customers is not None else 0
+            except Exception as agg_error:
+                logger.error(f"Error calculating returning customers: {str(agg_error)}")
+                returning_customers = 0
             
             return {
                 "total_customers": total_customers,
@@ -406,22 +465,38 @@ class AnalyticsService:
         """Get order analytics for a business"""
         try:
             total_orders = Order.objects(business=business_id).count()
+            # Ensure total_orders is an integer
+            if not isinstance(total_orders, int):
+                total_orders = int(total_orders) if total_orders is not None else 0
+                
             recent_orders = Order.objects(
                 Q(business=business_id) & Q(created_at__gte=start_date)
             ).count()
-            
+            # Ensure recent_orders is an integer
+            if not isinstance(recent_orders, int):
+                recent_orders = int(recent_orders) if recent_orders is not None else 0
+
             paid_orders = Order.objects(
                 Q(business=business_id) & Q(payment_status='paid')
             ).count()
-            
+            # Ensure paid_orders is an integer
+            if not isinstance(paid_orders, int):
+                paid_orders = int(paid_orders) if paid_orders is not None else 0
+
             pending_orders = Order.objects(
                 Q(business=business_id) & Q(payment_status='pending')
             ).count()
-            
+            # Ensure pending_orders is an integer
+            if not isinstance(pending_orders, int):
+                pending_orders = int(pending_orders) if pending_orders is not None else 0
+
             cancelled_orders = Order.objects(
                 Q(business=business_id) & Q(status='cancelled')
             ).count()
-            
+            # Ensure cancelled_orders is an integer
+            if not isinstance(cancelled_orders, int):
+                cancelled_orders = int(cancelled_orders) if cancelled_orders is not None else 0
+
             # Average order value with error handling
             avg_order_value = 0
             try:
@@ -436,7 +511,7 @@ class AnalyticsService:
             except Exception as avg_error:
                 logger.error(f"Error calculating average order value: {str(avg_error)}")
                 avg_order_value = 0
-            
+
             return {
                 "total_orders": total_orders,
                 "recent_orders": recent_orders,
@@ -466,6 +541,10 @@ class AnalyticsService:
             from models import OrderItem
             
             total_products = Product.objects(Q(business=business_id) & Q(is_active=True)).count()
+            
+            # Ensure total_products is an integer
+            if not isinstance(total_products, int):
+                total_products = int(total_products) if total_products is not None else 0
             
             # Best selling products - using aggregation pipeline
             pipeline = [
@@ -521,17 +600,29 @@ class AnalyticsService:
                 Q(business=business_id) & Q(created_at__gte=start_date)
             ).count()
             
+            # Ensure all values are integers
+            if not isinstance(total_sessions, int):
+                total_sessions = int(total_sessions) if total_sessions is not None else 0
+            if not isinstance(recent_sessions, int):
+                recent_sessions = int(recent_sessions) if recent_sessions is not None else 0
+            
             # Count total messages
             total_messages = 0
             for session in ChatSession.objects(business=business_id).only('id'):
-                total_messages += ChatMessage.objects(session=session.id).count()
+                msg_count = ChatMessage.objects(session=session.id).count()
+                if not isinstance(msg_count, int):
+                    msg_count = int(msg_count) if msg_count is not None else 0
+                total_messages += msg_count
             
             # Count recent messages
             recent_messages = 0
             for session in ChatSession.objects(business=business_id).only('id'):
-                recent_messages += ChatMessage.objects(
+                msg_count = ChatMessage.objects(
                     Q(session=session.id) & Q(timestamp__gte=start_date)
                 ).count()
+                if not isinstance(msg_count, int):
+                    msg_count = int(msg_count) if msg_count is not None else 0
+                recent_messages += msg_count
             
             # Average messages per session
             avg_messages_per_session = (total_messages / total_sessions) if total_sessions > 0 else 0
