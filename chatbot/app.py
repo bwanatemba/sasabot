@@ -135,6 +135,16 @@ def create_app():
         from models import Product
         return Product.objects(category=category)
     
+    @app.template_filter('total_messages')
+    def total_messages_filter(sessions):
+        """Get total count of messages across all sessions"""
+        if not sessions or not hasattr(sessions, 'items') or not sessions.items:
+            return 0
+        total = 0
+        for session in sessions.items:
+            total += len(session.messages) if session.messages else 0
+        return total
+    
     # Register error handlers
     @app.errorhandler(CSRFError)
     def handle_csrf_error(e):

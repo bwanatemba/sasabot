@@ -50,7 +50,7 @@
         <div class="col-md-3">
             <div class="card bg-info text-white">
                 <div class="card-body text-center">
-                    <h4 class="mb-0">{{ sessions.items|sum(attribute='messages')|length if sessions and sessions.items else 0 }}</h4>
+                    <h4 class="mb-0">{{ sessions|total_messages }}</h4>
                     <small>Total Messages</small>
                 </div>
             </div>
