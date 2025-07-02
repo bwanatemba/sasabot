@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Bulk Messaging{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">📢 Admin Bulk Messaging</h4>
+                    <p class="mb-0 opacity-75">Send messages to customers across all businesses</p>
+                </div>
+                <div class="card-body">
+                    <!-- Bulk Text Message -->
+                    <div class="row">
+                        <div class="col-lg-8 mx-auto">
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5>📝 Send Text Message</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST" action="{{ url_for('admin.send_bulk_message') }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <div class="mb-3">
+                                            <label for="business_id" class="form-label">Business *</label>
+                                            <select class="form-select" name="business_id" required>
+                                                <option value="">Select Business</option>
+                                                {% for business in businesses %}
+                                                <option value="{{ business.id }}">{{ business.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="form-text">Choose which business's customers to message</div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="message" class="form-label">Message *</label>
+                                            <textarea class="form-control" name="message" rows="4" 
+                                                    placeholder="Enter your message here..." required></textarea>
+                                            <div class="form-text">Keep messages concise and engaging</div>
+                                        </div>
+                                        
+                                        <!-- Customer Filters -->
+                                        <div class="card mb-3">
+                                            <div class="card-header">
+                                                <h6>👥 Customer Filters (Optional)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <label for="start_date" class="form-label">From Date</label>
+                                                        <input type="date" class="form-control" name="start_date">
+                                                        <div class="form-text">Filter customers registered from this date</div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="end_date" class="form-label">To Date</label>
+                                                        <input type="date" class="form-control" name="end_date">
+                                                        <div class="form-text">Filter customers registered up to this date</div>
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-3">
+                                                    <div class="col-md-6">
+                                                        <label for="active_days" class="form-label">Active in Last X Days</label>
+                                                        <input type="number" class="form-control" name="active_days" 
+                                                               placeholder="e.g., 30">
+                                                        <div class="form-text">Only customers active in recent days</div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="phone_numbers" class="form-label">Specific Phone Numbers</label>
+                                                        <textarea class="form-control" name="phone_numbers" rows="2"
+                                                                placeholder="254712345678, 254798765432..."></textarea>
+                                                        <div class="form-text">Comma-separated phone numbers</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="d-flex justify-content-between">
+                                            <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+                                                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                                            </a>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-paper-plane"></i> Send Message
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Usage Guidelines -->
+                    <div class="row mt-4">
+                        <div class="col-lg-8 mx-auto">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-dark">
+                                    <h6 class="mb-0">⚠️ Important Guidelines</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="mb-0">
+                                        <li><strong>Respect Customer Privacy:</strong> Only send relevant, valuable messages</li>
+                                        <li><strong>Frequency:</strong> Avoid sending too many messages to prevent spam complaints</li>
+                                        <li><strong>Timing:</strong> Send messages during appropriate business hours</li>
+                                        <li><strong>Content:</strong> Ensure messages are professional and add value to customers</li>
+                                        <li><strong>Compliance:</strong> Follow local regulations and WhatsApp Business policies</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Flash Messages Display -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-hide flash messages after 5 seconds
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 300);
+        }, 5000);
+    });
+});
+</script>
+{% endblock %}
