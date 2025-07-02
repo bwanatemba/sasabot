@@ -14,7 +14,7 @@ from .mongodb_models import (
     OnboardingState
 )
 
-# Maintain compatibility with existing code
+# Export all models
 __all__ = [
     'Admin', 
     'Vendor', 

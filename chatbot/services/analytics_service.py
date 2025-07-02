@@ -66,7 +66,41 @@ class AnalyticsService:
             
         except Exception as e:
             logger.error(f"Error getting business analytics: {str(e)}")
-            return {"error": str(e)}
+            return {
+                "error": str(e),
+                "success": False,
+                "customer_analytics": {
+                    "total_customers": 0,
+                    "recent_customers": 0,
+                    "returning_customers": 0,
+                    "customer_growth": 0
+                },
+                "order_analytics": {
+                    "total_orders": 0,
+                    "recent_orders": 0,
+                    "paid_orders": 0,
+                    "pending_orders": 0,
+                    "cancelled_orders": 0,
+                    "average_order_value": 0.0,
+                    "conversion_rate": 0.0
+                },
+                "product_analytics": {
+                    "total_products": 0,
+                    "best_sellers": []
+                },
+                "chat_analytics": {
+                    "total_chat_sessions": 0,
+                    "recent_chat_sessions": 0,
+                    "total_messages": 0,
+                    "recent_messages": 0,
+                    "average_messages_per_session": 0.0
+                },
+                "revenue_analytics": {
+                    "total_revenue": 0.0,
+                    "recent_revenue": 0.0,
+                    "daily_revenue": []
+                }
+            }
     
     @staticmethod
     def get_vendor_analytics(vendor_id, days=30):
@@ -360,7 +394,12 @@ class AnalyticsService:
             
         except Exception as e:
             logger.error(f"Error getting customer analytics: {str(e)}")
-            return {}
+            return {
+                "total_customers": 0,
+                "recent_customers": 0,
+                "returning_customers": 0,
+                "customer_growth": 0
+            }
     
     @staticmethod
     def _get_order_analytics(business_id, start_date):
@@ -383,14 +422,19 @@ class AnalyticsService:
                 Q(business=business_id) & Q(status='cancelled')
             ).count()
             
-            # Average order value
-            paid_orders_list = Order.objects(
-                Q(business=business_id) & Q(payment_status='paid')
-            ).only('total_amount')
-            
-            if paid_orders_list:
-                avg_order_value = sum(order.total_amount for order in paid_orders_list) / len(paid_orders_list)
-            else:
+            # Average order value with error handling
+            avg_order_value = 0
+            try:
+                paid_orders_list = Order.objects(
+                    Q(business=business_id) & Q(payment_status='paid')
+                ).only('total_amount')
+                
+                if paid_orders_list and len(paid_orders_list) > 0:
+                    valid_amounts = [order.total_amount for order in paid_orders_list if order.total_amount is not None]
+                    if valid_amounts:
+                        avg_order_value = sum(valid_amounts) / len(valid_amounts)
+            except Exception as avg_error:
+                logger.error(f"Error calculating average order value: {str(avg_error)}")
                 avg_order_value = 0
             
             return {
@@ -405,7 +449,15 @@ class AnalyticsService:
             
         except Exception as e:
             logger.error(f"Error getting order analytics: {str(e)}")
-            return {}
+            return {
+                "total_orders": 0,
+                "recent_orders": 0,
+                "paid_orders": 0,
+                "pending_orders": 0,
+                "cancelled_orders": 0,
+                "average_order_value": 0.0,
+                "conversion_rate": 0.0
+            }
     
     @staticmethod
     def _get_product_analytics(business_id, start_date):
@@ -455,7 +507,10 @@ class AnalyticsService:
             
         except Exception as e:
             logger.error(f"Error getting product analytics: {str(e)}")
-            return {}
+            return {
+                "total_products": 0,
+                "best_sellers": []
+            }
     
     @staticmethod
     def _get_chat_analytics(business_id, start_date):
@@ -491,7 +546,13 @@ class AnalyticsService:
             
         except Exception as e:
             logger.error(f"Error getting chat analytics: {str(e)}")
-            return {}
+            return {
+                "total_chat_sessions": 0,
+                "recent_chat_sessions": 0,
+                "total_messages": 0,
+                "recent_messages": 0,
+                "average_messages_per_session": 0.0
+            }
     
     @staticmethod
     def _get_revenue_analytics(business_id, start_date):
@@ -545,7 +606,11 @@ class AnalyticsService:
             
         except Exception as e:
             logger.error(f"Error getting revenue analytics: {str(e)}")
-            return {}
+            return {
+                "total_revenue": 0.0,
+                "recent_revenue": 0.0,
+                "daily_revenue": []
+            }
     
     @staticmethod
     def get_export_data(business_id, data_type, vendor_id=None, start_date=None, end_date=None):

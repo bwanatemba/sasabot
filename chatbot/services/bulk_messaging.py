@@ -28,13 +28,13 @@ class BulkMessagingService:
             vendor_id: ID of vendor (for permission checking)
         """
         try:
-            # Verify permissions
+            # Verify permissions using MongoEngine
             if vendor_id:
-                business = Business.query.filter_by(id=business_id, vendor_id=vendor_id).first()
+                business = Business.objects(id=business_id, vendor=vendor_id).first()
                 if not business:
                     return {"error": "Business not found or access denied"}
             else:
-                business = Business.query.get(business_id)
+                business = Business.objects(id=business_id).first()
                 if not business:
                     return {"error": "Business not found"}
             
@@ -76,13 +76,13 @@ class BulkMessagingService:
         Send interactive promotional message to customers
         """
         try:
-            # Verify permissions
+            # Verify permissions using MongoEngine
             if vendor_id:
-                business = Business.query.filter_by(id=business_id, vendor_id=vendor_id).first()
+                business = Business.objects(id=business_id, vendor=vendor_id).first()
                 if not business:
                     return {"error": "Business not found or access denied"}
             else:
-                business = Business.query.get(business_id)
+                business = Business.objects(id=business_id).first()
                 if not business:
                     return {"error": "Business not found"}
             
@@ -128,43 +128,47 @@ class BulkMessagingService:
     
     @staticmethod
     def _get_filtered_customers(business_id, customer_filter=None):
-        """Get customers based on filter criteria"""
+        """Get customers based on filter criteria using MongoEngine"""
         try:
             # Base query - customers who have chatted with this business
-            chat_sessions = ChatSession.query.filter_by(business_id=business_id).all()
-            customer_ids = list(set([session.customer_id for session in chat_sessions]))
+            chat_sessions = ChatSession.objects(business=business_id)
+            customer_ids = list(set([str(session.customer.id) for session in chat_sessions if session.customer]))
             
-            query = Customer.query.filter(Customer.id.in_(customer_ids))
+            # Convert string IDs to ObjectIds for MongoDB query
+            from bson import ObjectId
+            customer_object_ids = [ObjectId(cid) for cid in customer_ids if ObjectId.is_valid(cid)]
+            
+            query = Customer.objects(id__in=customer_object_ids)
             
             if customer_filter:
                 # Filter by date range
                 if customer_filter.get('start_date'):
                     start_date = datetime.strptime(customer_filter['start_date'], '%Y-%m-%d')
-                    query = query.filter(Customer.created_at >= start_date)
+                    query = query.filter(created_at__gte=start_date)
                 
                 if customer_filter.get('end_date'):
                     end_date = datetime.strptime(customer_filter['end_date'], '%Y-%m-%d')
                     end_date = end_date.replace(hour=23, minute=59, second=59)
-                    query = query.filter(Customer.created_at <= end_date)
+                    query = query.filter(created_at__lte=end_date)
                 
                 # Filter by specific phone numbers
                 if customer_filter.get('phone_numbers'):
                     phone_list = customer_filter['phone_numbers']
                     if isinstance(phone_list, str):
                         phone_list = [p.strip() for p in phone_list.split(',')]
-                    query = query.filter(Customer.phone_number.in_(phone_list))
+                    query = query.filter(phone_number__in=phone_list)
                 
                 # Filter by activity (customers who chatted in last N days)
                 if customer_filter.get('active_days'):
                     days_ago = datetime.utcnow() - timedelta(days=int(customer_filter['active_days']))
-                    active_sessions = ChatSession.query.filter(
-                        ChatSession.business_id == business_id,
-                        ChatSession.created_at >= days_ago
-                    ).all()
-                    active_customer_ids = list(set([session.customer_id for session in active_sessions]))
-                    query = query.filter(Customer.id.in_(active_customer_ids))
+                    active_sessions = ChatSession.objects(
+                        business=business_id,
+                        created_at__gte=days_ago
+                    )
+                    active_customer_ids = [ObjectId(str(session.customer.id)) for session in active_sessions if session.customer]
+                    query = query.filter(id__in=active_customer_ids)
             
-            return query.all()
+            return list(query)
             
         except Exception as e:
             logger.error(f"Error filtering customers: {str(e)}")
@@ -174,9 +178,9 @@ class BulkMessagingService:
     def import_customers_from_csv(business_id, csv_file_path, vendor_id=None):
         """Import customers from CSV file"""
         try:
-            # Verify permissions
+            # Verify permissions using MongoEngine
             if vendor_id:
-                business = Business.query.filter_by(id=business_id, vendor_id=vendor_id).first()
+                business = Business.objects(id=business_id, vendor=vendor_id).first()
                 if not business:
                     return {"error": "Business not found or access denied"}
             
@@ -200,8 +204,8 @@ class BulkMessagingService:
                         skipped_count += 1
                         continue
                     
-                    # Check if customer already exists
-                    existing_customer = Customer.query.filter_by(phone_number=phone_number).first()
+                    # Check if customer already exists using MongoEngine
+                    existing_customer = Customer.objects(phone_number=phone_number).first()
                     if existing_customer:
                         skipped_count += 1
                         continue
@@ -213,14 +217,12 @@ class BulkMessagingService:
                         email=row.get('email', '').strip() if 'email' in row else None
                     )
                     
-                    db.session.add(customer)
+                    customer.save()
                     imported_count += 1
                     
                 except Exception as e:
                     errors.append(f"Row {index + 1}: {str(e)}")
                     skipped_count += 1
-            
-            db.session.commit()
             
             return {
                 "success": True,
@@ -231,31 +233,34 @@ class BulkMessagingService:
             
         except Exception as e:
             logger.error(f"Error importing customers from CSV: {str(e)}")
-            db.session.rollback()
             return {"error": str(e)}
     
     @staticmethod
     def export_customers_to_csv(business_id, vendor_id=None):
         """Export customers to CSV file"""
         try:
-            # Verify permissions
+            # Verify permissions using MongoEngine
             if vendor_id:
-                business = Business.query.filter_by(id=business_id, vendor_id=vendor_id).first()
+                business = Business.objects(id=business_id, vendor=vendor_id).first()
                 if not business:
                     return {"error": "Business not found or access denied"}
             
-            # Get customers for this business
-            chat_sessions = ChatSession.query.filter_by(business_id=business_id).all()
-            customer_ids = list(set([session.customer_id for session in chat_sessions]))
-            customers = Customer.query.filter(Customer.id.in_(customer_ids)).all()
+            # Get customers for this business using MongoEngine
+            chat_sessions = ChatSession.objects(business=business_id)
+            customer_ids = list(set([str(session.customer.id) for session in chat_sessions if session.customer]))
+            
+            # Convert to ObjectIds for query
+            from bson import ObjectId
+            customer_object_ids = [ObjectId(cid) for cid in customer_ids if ObjectId.is_valid(cid)]
+            customers = Customer.objects(id__in=customer_object_ids)
             
             # Create CSV data
             csv_data = []
             for customer in customers:
                 # Get chat statistics
-                customer_sessions = ChatSession.query.filter_by(
-                    business_id=business_id, 
-                    customer_id=customer.id
+                customer_sessions = ChatSession.objects(
+                    business=business_id, 
+                    customer=customer.id
                 ).count()
                 
                 csv_data.append({
@@ -313,30 +318,30 @@ class BulkMessagingService:
     def get_messaging_analytics(business_id, days=30, vendor_id=None):
         """Get messaging analytics for a business"""
         try:
-            # Verify permissions
+            # Verify permissions using MongoEngine
             if vendor_id:
-                business = Business.query.filter_by(id=business_id, vendor_id=vendor_id).first()
+                business = Business.objects(id=business_id, vendor=vendor_id).first()
                 if not business:
                     return {"error": "Business not found or access denied"}
             
             start_date = datetime.utcnow() - timedelta(days=days)
             
-            # Get chat sessions count
-            total_sessions = ChatSession.query.filter_by(business_id=business_id).count()
-            recent_sessions = ChatSession.query.filter(
-                ChatSession.business_id == business_id,
-                ChatSession.created_at >= start_date
+            # Get chat sessions count using MongoEngine
+            total_sessions = ChatSession.objects(business=business_id).count()
+            recent_sessions = ChatSession.objects(
+                business=business_id,
+                created_at__gte=start_date
             ).count()
             
             # Get unique customers count
-            all_sessions = ChatSession.query.filter_by(business_id=business_id).all()
-            unique_customers = len(set([session.customer_id for session in all_sessions]))
+            all_sessions = ChatSession.objects(business=business_id)
+            unique_customers = len(set([str(session.customer.id) for session in all_sessions if session.customer]))
             
-            recent_session_customers = ChatSession.query.filter(
-                ChatSession.business_id == business_id,
-                ChatSession.created_at >= start_date
-            ).all()
-            recent_unique_customers = len(set([session.customer_id for session in recent_session_customers]))
+            recent_session_customers = ChatSession.objects(
+                business=business_id,
+                created_at__gte=start_date
+            )
+            recent_unique_customers = len(set([str(session.customer.id) for session in recent_session_customers if session.customer]))
             
             return {
                 "success": True,

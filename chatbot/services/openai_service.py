@@ -64,46 +64,46 @@ def process_gpt_interaction(phone_number, message, business_id=None):
     try:
         client = initialize_openai_client()
         
-        # Get or create customer
-        from models import db
-        customer = Customer.query.filter_by(phone_number=phone_number).first()
+        # Get or create customer using MongoEngine
+        from models import Customer, Business
+        customer = Customer.objects(phone_number=phone_number).first()
         if not customer:
             customer = Customer(phone_number=phone_number)
-            db.session.add(customer)
-            db.session.commit()
+            customer.save()
         
         # Determine business context if not provided
         if not business_id:
-            business = Business.query.first()  # For now, use first business
+            business = Business.objects().first()  # For now, use first business
         else:
-            business = Business.query.get(business_id)
+            business = Business.objects(id=business_id).first()
         
         if not business:
             from services.messaging_service import send_whatsapp_text_message
             return send_whatsapp_text_message(phone_number, "Sorry, I couldn't find the business information.")
         
-        # Get or create chat session
-        session = ChatSession.query.filter_by(
-            customer_id=customer.id,
-            business_id=business.id
+        # Get or create chat session using MongoEngine
+        from models import ChatSession
+        session = ChatSession.objects(
+            customer=customer.id,
+            business=business.id
         ).first()
         
         if not session:
             session = ChatSession(
-                customer_id=customer.id,
-                business_id=business.id,
+                customer=customer.id,
+                business=business.id,
                 session_id=f"{customer.id}_{business.id}_{phone_number}"
             )
-            db.session.add(session)
-            db.session.commit()
+            session.save()
         
-        # Save customer message
+        # Save customer message using MongoEngine
+        from models import ChatMessage
         customer_message = ChatMessage(
-            session_id=session.id,
+            session=session.id,
             sender_type='customer',
             message_text=message
         )
-        db.session.add(customer_message)
+        customer_message.save()
         
         # Get business custom instructions
         custom_instructions = business.custom_instructions or "You are a helpful customer service assistant."
@@ -139,14 +139,13 @@ def process_gpt_interaction(phone_number, message, business_id=None):
         
         gpt_response = response.choices[0].message.content
         
-        # Save GPT response
+        # Save GPT response using MongoEngine
         gpt_message = ChatMessage(
-            session_id=session.id,
+            session=session.id,
             sender_type='gpt',
             message_text=gpt_response
         )
-        db.session.add(gpt_message)
-        db.session.commit()
+        gpt_message.save()
         
         # Send response via WhatsApp
         from services.messaging_service import send_whatsapp_text_message
@@ -193,10 +192,10 @@ def handle_order_tracking(phone_number, message, business_id):
 
 def handle_product_inquiry(phone_number, business_id):
     """Handle product/service inquiries"""
-    from models import db
+    from models import Business, Category
     
-    business = Business.query.get(business_id)
-    categories = Category.query.filter_by(business_id=business_id).all()
+    business = Business.objects(id=business_id).first()
+    categories = Category.objects(business=business_id)
     
     if not categories:
         from services.messaging_service import send_whatsapp_text_message
@@ -221,9 +220,9 @@ def handle_product_inquiry(phone_number, business_id):
 
 def handle_product_details(phone_number, product_id, business_id):
     """Handle product details request"""
-    from models import db
+    from models import Product
     
-    product = Product.query.filter_by(product_id=product_id, business_id=business_id).first()
+    product = Product.objects(product_id=product_id, business=business_id).first()
     
     if not product:
         from services.messaging_service import send_whatsapp_text_message
@@ -252,9 +251,9 @@ def handle_product_details(phone_number, product_id, business_id):
 
 def handle_category_selection(phone_number, category_id):
     """Handle category selection"""
-    from models import db
+    from models import Product
     
-    products = Product.query.filter_by(category_id=category_id, is_active=True).all()
+    products = Product.objects(category=category_id, is_active=True)
     
     if not products:
         from services.messaging_service import send_whatsapp_text_message
