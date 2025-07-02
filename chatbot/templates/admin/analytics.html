@@ -20,7 +20,17 @@
                 </div>
                 <div class="card-body">
                     
-                    {% if analytics.get('success') %}
+                    {% if analytics.get('error') %}
+                    <!-- Error State -->
+                    <div class="alert alert-danger" role="alert">
+                        <h4 class="alert-heading">Analytics Error</h4>
+                        <p>There was an error loading the analytics data: {{ analytics.error }}</p>
+                        <hr>
+                        <p class="mb-0">Please try refreshing the page or contact support if the issue persists.</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if analytics.get('success') or analytics.get('summary') %}
                     <!-- System Overview -->
                     <div class="row mb-4">
                         <div class="col-lg-2 col-md-4 col-sm-6 mb-3">

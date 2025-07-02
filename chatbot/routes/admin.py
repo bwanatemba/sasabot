@@ -300,14 +300,67 @@ def add_product(business_id):
 @admin_bp.route('/analytics')
 @admin_required
 def analytics():
-    days = request.args.get('days', 30, type=int)
-    
-    from services.analytics_service import AnalyticsService
-    analytics_data = AnalyticsService.get_admin_analytics(days)
-    
-    return render_template('admin/analytics.html', 
-                         analytics=analytics_data,
-                         days=days)
+    try:
+        days = request.args.get('days', 30, type=int)
+        
+        from services.analytics_service import AnalyticsService
+        analytics_data = AnalyticsService.get_admin_analytics(days)
+        
+        # Check if analytics data has an error
+        if analytics_data.get('error'):
+            flash(f'Analytics Error: {analytics_data["error"]}', 'error')
+            # Provide fallback data
+            analytics_data = {
+                'success': False,
+                'error': analytics_data['error'],
+                'summary': {
+                    'total_vendors': 0,
+                    'recent_vendors': 0,
+                    'total_businesses': 0,
+                    'recent_businesses': 0,
+                    'total_customers': 0,
+                    'recent_customers': 0,
+                    'total_orders': 0,
+                    'recent_orders': 0,
+                    'paid_orders': 0,
+                    'total_revenue': 0,
+                    'recent_revenue': 0,
+                    'total_chat_sessions': 0,
+                    'recent_chat_sessions': 0
+                },
+                'top_businesses': []
+            }
+        
+        return render_template('admin/analytics.html', 
+                             analytics=analytics_data,
+                             days=days)
+                             
+    except Exception as e:
+        flash(f'Error loading analytics: {str(e)}', 'error')
+        # Provide minimal fallback data
+        analytics_data = {
+            'success': False,
+            'error': str(e),
+            'summary': {
+                'total_vendors': 0,
+                'recent_vendors': 0,
+                'total_businesses': 0,
+                'recent_businesses': 0,
+                'total_customers': 0,
+                'recent_customers': 0,
+                'total_orders': 0,
+                'recent_orders': 0,
+                'paid_orders': 0,
+                'total_revenue': 0,
+                'recent_revenue': 0,
+                'total_chat_sessions': 0,
+                'recent_chat_sessions': 0
+            },
+            'top_businesses': []
+        }
+        return render_template('admin/analytics.html', 
+                             analytics=analytics_data,
+                             days=30)
 
 @admin_bp.route('/business/<business_id>/analytics')
 @admin_required

@@ -136,74 +136,113 @@ class AnalyticsService:
             return {"error": str(e)}
     
     @staticmethod
+    @staticmethod
     def get_admin_analytics(days=30):
         """Get system-wide analytics for admins"""
         try:
             start_date = datetime.utcnow() - timedelta(days=days)
             
             # Vendor Analytics
-            total_vendors = Vendor.objects(is_active=True).count()
-            recent_vendors = Vendor.objects(
-                Q(is_active=True) & Q(created_at__gte=start_date)
-            ).count()
+            try:
+                total_vendors = Vendor.objects(is_active=True).count()
+                recent_vendors = Vendor.objects(
+                    Q(is_active=True) & Q(created_at__gte=start_date)
+                ).count()
+            except Exception as e:
+                logger.error(f"Error getting vendor analytics: {str(e)}")
+                total_vendors = recent_vendors = 0
             
             # Business Analytics
-            total_businesses = Business.objects(is_active=True).count()
-            recent_businesses = Business.objects(
-                Q(is_active=True) & Q(created_at__gte=start_date)
-            ).count()
+            try:
+                total_businesses = Business.objects(is_active=True).count()
+                recent_businesses = Business.objects(
+                    Q(is_active=True) & Q(created_at__gte=start_date)
+                ).count()
+            except Exception as e:
+                logger.error(f"Error getting business analytics: {str(e)}")
+                total_businesses = recent_businesses = 0
             
             # Customer Analytics
-            total_customers = Customer.objects().count()
-            recent_customers = Customer.objects(created_at__gte=start_date).count()
+            try:
+                total_customers = Customer.objects().count()
+                recent_customers = Customer.objects(created_at__gte=start_date).count()
+            except Exception as e:
+                logger.error(f"Error getting customer analytics: {str(e)}")
+                total_customers = recent_customers = 0
             
             # Order Analytics
-            total_orders = Order.objects().count()
-            recent_orders = Order.objects(created_at__gte=start_date).count()
-            paid_orders = Order.objects(payment_status='paid').count()
+            try:
+                total_orders = Order.objects().count()
+                recent_orders = Order.objects(created_at__gte=start_date).count()
+                paid_orders = Order.objects(payment_status='paid').count()
+            except Exception as e:
+                logger.error(f"Error getting order analytics: {str(e)}")
+                total_orders = recent_orders = paid_orders = 0
             
             # Revenue Analytics
-            all_paid_orders = Order.objects(payment_status='paid').only('total_amount')
-            total_revenue = sum(order.total_amount for order in all_paid_orders)
-            
-            recent_paid_orders = Order.objects(
-                Q(payment_status='paid') & Q(created_at__gte=start_date)
-            ).only('total_amount')
-            recent_revenue = sum(order.total_amount for order in recent_paid_orders)
+            try:
+                all_paid_orders = Order.objects(payment_status='paid').only('total_amount')
+                total_revenue = sum(order.total_amount or 0 for order in all_paid_orders)
+                
+                recent_paid_orders = Order.objects(
+                    Q(payment_status='paid') & Q(created_at__gte=start_date)
+                ).only('total_amount')
+                recent_revenue = sum(order.total_amount or 0 for order in recent_paid_orders)
+            except Exception as e:
+                logger.error(f"Error calculating revenue: {str(e)}")
+                total_revenue = 0
+                recent_revenue = 0
             
             # Chat Analytics
-            total_chat_sessions = ChatSession.objects().count()
-            recent_chat_sessions = ChatSession.objects(created_at__gte=start_date).count()
+            try:
+                total_chat_sessions = ChatSession.objects().count()
+                recent_chat_sessions = ChatSession.objects(created_at__gte=start_date).count()
+            except Exception as e:
+                logger.error(f"Error getting chat analytics: {str(e)}")
+                total_chat_sessions = recent_chat_sessions = 0
             
-            # Top performing businesses using aggregation
-            pipeline = [
-                {"$match": {"payment_status": "paid"}},
-                {"$group": {
-                    "_id": "$business",
-                    "order_count": {"$sum": 1},
-                    "revenue": {"$sum": "$total_amount"}
-                }},
-                {"$sort": {"revenue": -1}},
-                {"$limit": 10},
-                {"$lookup": {
-                    "from": "businesses",
-                    "localField": "_id",
-                    "foreignField": "_id",
-                    "as": "business_info"
-                }},
-                {"$unwind": "$business_info"}
-            ]
-            
-            top_businesses_data = list(Order.objects.aggregate(pipeline))
-            
-            top_businesses_list = []
-            for business in top_businesses_data:
-                top_businesses_list.append({
-                    "business_id": str(business["_id"]),
-                    "business_name": business["business_info"].get("name", ""),
-                    "order_count": business["order_count"],
-                    "revenue": float(business["revenue"])
-                })
+            # Top performing businesses - simplified approach to avoid aggregation issues
+            try:
+                # Get all paid orders grouped by business
+                paid_orders_by_business = {}
+                paid_orders = Order.objects(payment_status='paid').only('business', 'total_amount')
+                
+                for order in paid_orders:
+                    if order.business and order.total_amount:
+                        business_id = str(order.business.id)
+                        if business_id not in paid_orders_by_business:
+                            paid_orders_by_business[business_id] = {
+                                'order_count': 0,
+                                'revenue': 0,
+                                'business': order.business
+                            }
+                        paid_orders_by_business[business_id]['order_count'] += 1
+                        paid_orders_by_business[business_id]['revenue'] += (order.total_amount or 0)
+                
+                # Sort by revenue and get top 10
+                sorted_businesses = sorted(
+                    paid_orders_by_business.items(), 
+                    key=lambda x: x[1]['revenue'], 
+                    reverse=True
+                )[:10]
+                
+                top_businesses_list = []
+                for business_id, data in sorted_businesses:
+                    try:
+                        business_name = data['business'].name if data['business'] else 'Unknown Business'
+                        top_businesses_list.append({
+                            "business_id": business_id,
+                            "business_name": business_name,
+                            "order_count": data['order_count'],
+                            "revenue": float(data['revenue'])
+                        })
+                    except Exception as e:
+                        logger.error(f"Error processing business {business_id}: {str(e)}")
+                        continue
+                    
+            except Exception as e:
+                logger.error(f"Error getting top businesses: {str(e)}")
+                top_businesses_list = []
             
             return {
                 "success": True,
@@ -320,18 +359,18 @@ class AnalyticsService:
                 {"$lookup": {
                     "from": "orders",
                     "localField": "_id", 
-                    "foreignField": "items.product",
+                    "foreignField": "order_items.product",
                     "as": "orders"
                 }},
                 {"$unwind": "$orders"},
                 {"$match": {"orders.payment_status": "paid"}},
-                {"$unwind": "$orders.items"},
-                {"$match": {"orders.items.product": {"$exists": True}}},
+                {"$unwind": "$orders.order_items"},
+                {"$match": {"orders.order_items.product": {"$exists": True}}},
                 {"$group": {
                     "_id": "$_id",
                     "product_name": {"$first": "$name"},
-                    "total_sold": {"$sum": "$orders.items.quantity"},
-                    "total_revenue": {"$sum": "$orders.items.total_price"}
+                    "total_sold": {"$sum": "$orders.order_items.quantity"},
+                    "total_revenue": {"$sum": "$orders.order_items.total_price"}
                 }},
                 {"$sort": {"total_sold": -1}},
                 {"$limit": 5}
@@ -582,12 +621,12 @@ class AnalyticsService:
                         "payment_status": "paid",
                         "created_at": {"$gte": start_date, "$lte": end_date}
                     }},
-                    {"$unwind": "$items"},
-                    {"$match": {"items.product": str(product.id)}},
+                    {"$unwind": "$order_items"},
+                    {"$match": {"order_items.product": str(product.id)}},
                     {"$group": {
                         "_id": None,
-                        "total_sold": {"$sum": "$items.quantity"},
-                        "total_revenue": {"$sum": "$items.total_price"},
+                        "total_sold": {"$sum": "$order_items.quantity"},
+                        "total_revenue": {"$sum": "$order_items.total_price"},
                         "unique_customers": {"$addToSet": "$customer"}
                     }},
                     {"$project": {
