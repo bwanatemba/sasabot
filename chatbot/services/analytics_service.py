@@ -102,11 +102,14 @@ class AnalyticsService:
                 Q(business__in=business_ids) & Q(created_at__gte=start_date)
             ).count()
             
-            # Calculate total revenue
-            paid_orders = Order.objects(
+            # Calculate total revenue and count paid orders
+            paid_orders_queryset = Order.objects(
                 Q(business__in=business_ids) & Q(payment_status='paid')
             ).only('total_amount')
-            total_revenue = sum(order.total_amount for order in paid_orders)
+            total_revenue = sum(order.total_amount for order in paid_orders_queryset)
+            paid_orders_count = Order.objects(
+                Q(business__in=business_ids) & Q(payment_status='paid')
+            ).count()
             
             recent_paid_orders = Order.objects(
                 Q(business__in=business_ids) & Q(payment_status='paid') & Q(created_at__gte=start_date)

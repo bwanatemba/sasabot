@@ -108,7 +108,7 @@
                                             <small>Paid Orders</small>
                                         </div>
                                         <div class="col-md-3 col-6 mb-3">
-                                            <h4 class="text-warning">{{ analytics.summary.total_orders - analytics.summary.paid_orders }}</h4>
+                                            <h4 class="text-warning">{{ (analytics.summary.total_orders|int) - (analytics.summary.paid_orders|int) }}</h4>
                                             <small>Pending</small>
                                         </div>
                                         <div class="col-md-3 col-6 mb-3">
@@ -310,7 +310,7 @@ function exportSystemData(type) {
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h4 class="card-title mb-0">KES {{ "%.2f"|format(total_revenue) }}</h4>
+                            <h4 class="card-title mb-0">KES {{ "%.2f"|format(analytics.summary.total_revenue) }}</h4>
                             <p class="card-text">Total Revenue</p>
                         </div>
                         <i class="fas fa-money-bill-wave fa-2x opacity-75"></i>
