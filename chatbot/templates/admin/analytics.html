@@ -116,7 +116,7 @@
                                             <small>Recent ({{ days }}d)</small>
                                         </div>
                                         <div class="col-md-3 col-6 mb-3">
-                                            <h4 class="text-primary">{{ "%.1f"|format((analytics.summary.paid_orders / analytics.summary.total_orders * 100) if analytics.summary.total_orders > 0 else 0) }}%</h4>
+                                            <h4 class="text-primary">{{ "%.1f"|format(((analytics.summary.paid_orders|int) / (analytics.summary.total_orders|int) * 100) if (analytics.summary.total_orders|int) > 0 else 0) }}%</h4>
                                             <small>Success Rate</small>
                                         </div>
                                     </div>
@@ -140,7 +140,7 @@
                                     </div>
                                     <div class="mb-3">
                                         <small class="text-muted">Avg Revenue per Business</small>
-                                        <h6>${{ "%.2f"|format(analytics.summary.total_revenue / analytics.summary.total_businesses if analytics.summary.total_businesses > 0 else 0) }}</h6>
+                                        <h6>${{ "%.2f"|format((analytics.summary.total_revenue|float) / (analytics.summary.total_businesses|int) if (analytics.summary.total_businesses|int) > 0 else 0) }}</h6>
                                     </div>
                                 </div>
                             </div>
@@ -338,7 +338,7 @@ function exportSystemData(type) {
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h4 class="card-title mb-0">KES {{ "%.2f"|format(analytics.summary.total_revenue / analytics.summary.paid_orders if analytics.summary.paid_orders > 0 else 0) }}</h4>
+                            <h4 class="card-title mb-0">KES {{ "%.2f"|format((analytics.summary.total_revenue|float) / (analytics.summary.paid_orders|int) if (analytics.summary.paid_orders|int) > 0 else 0) }}</h4>
                             <p class="card-text">Avg Order Value</p>
                         </div>
                         <i class="fas fa-chart-line fa-2x opacity-75"></i>
@@ -352,7 +352,7 @@ function exportSystemData(type) {
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h4 class="card-title mb-0">{{ "%.1f"|format(analytics.summary.paid_orders / analytics.summary.total_orders * 100 if analytics.summary.total_orders > 0 else 0) }}%</h4>
+                            <h4 class="card-title mb-0">{{ "%.1f"|format(((analytics.summary.paid_orders|int) / (analytics.summary.total_orders|int) * 100) if (analytics.summary.total_orders|int) > 0 else 0) }}%</h4>
                             <p class="card-text">Success Rate</p>
                         </div>
                         <i class="fas fa-percentage fa-2x opacity-75"></i>

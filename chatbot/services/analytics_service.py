@@ -179,12 +179,12 @@ class AnalyticsService:
                 "period_days": days,
                 "businesses_count": len(businesses),
                 "summary": {
-                    "total_customers": total_customers,
-                    "recent_customers": recent_customers,
-                    "total_orders": total_orders,
-                    "recent_orders": recent_orders,
-                    "total_revenue": float(total_revenue),
-                    "recent_revenue": float(recent_revenue)
+                    "total_customers": int(total_customers) if total_customers is not None else 0,
+                    "recent_customers": int(recent_customers) if recent_customers is not None else 0,
+                    "total_orders": int(total_orders) if total_orders is not None else 0,
+                    "recent_orders": int(recent_orders) if recent_orders is not None else 0,
+                    "total_revenue": float(total_revenue) if total_revenue is not None else 0.0,
+                    "recent_revenue": float(recent_revenue) if recent_revenue is not None else 0.0
                 },
                 "business_performance": business_performance
             }
@@ -370,19 +370,19 @@ class AnalyticsService:
                 "success": True,
                 "period_days": days,
                 "summary": {
-                    "total_vendors": total_vendors,
-                    "recent_vendors": recent_vendors,
-                    "total_businesses": total_businesses,
-                    "recent_businesses": recent_businesses,
-                    "total_customers": total_customers,
-                    "recent_customers": recent_customers,
-                    "total_orders": total_orders,
-                    "recent_orders": recent_orders,
-                    "paid_orders": paid_orders,
-                    "total_revenue": float(total_revenue),
-                    "recent_revenue": float(recent_revenue),
-                    "total_chat_sessions": total_chat_sessions,
-                    "recent_chat_sessions": recent_chat_sessions
+                    "total_vendors": int(total_vendors) if total_vendors is not None else 0,
+                    "recent_vendors": int(recent_vendors) if recent_vendors is not None else 0,
+                    "total_businesses": int(total_businesses) if total_businesses is not None else 0,
+                    "recent_businesses": int(recent_businesses) if recent_businesses is not None else 0,
+                    "total_customers": int(total_customers) if total_customers is not None else 0,
+                    "recent_customers": int(recent_customers) if recent_customers is not None else 0,
+                    "total_orders": int(total_orders) if total_orders is not None else 0,
+                    "recent_orders": int(recent_orders) if recent_orders is not None else 0,
+                    "paid_orders": int(paid_orders) if paid_orders is not None else 0,
+                    "total_revenue": float(total_revenue) if total_revenue is not None else 0.0,
+                    "recent_revenue": float(recent_revenue) if recent_revenue is not None else 0.0,
+                    "total_chat_sessions": int(total_chat_sessions) if total_chat_sessions is not None else 0,
+                    "recent_chat_sessions": int(recent_chat_sessions) if recent_chat_sessions is not None else 0
                 },
                 "top_businesses": top_businesses_list
             }
@@ -432,12 +432,18 @@ class AnalyticsService:
             
             # Returning customers (customers with multiple chat sessions)
             try:
-                customer_sessions = ChatSession.objects(business=business_id).aggregate([
-                    {"$group": {"_id": "$customer", "session_count": {"$sum": 1}}},
-                    {"$match": {"session_count": {"$gt": 1}}},
-                    {"$count": "returning_customers"}
-                ])
-                returning_customers = list(customer_sessions)[0].get('returning_customers', 0) if list(customer_sessions) else 0
+                # Use a simpler approach to avoid aggregation issues
+                all_sessions = ChatSession.objects(business=business_id)
+                customer_session_counts = {}
+                
+                for session in all_sessions:
+                    if session.customer:
+                        customer_id = str(session.customer.id)
+                        customer_session_counts[customer_id] = customer_session_counts.get(customer_id, 0) + 1
+                
+                # Count customers with more than one session
+                returning_customers = sum(1 for count in customer_session_counts.values() if count > 1)
+                
                 if not isinstance(returning_customers, int):
                     returning_customers = int(returning_customers) if returning_customers is not None else 0
             except Exception as agg_error:
@@ -445,10 +451,10 @@ class AnalyticsService:
                 returning_customers = 0
             
             return {
-                "total_customers": total_customers,
-                "recent_customers": recent_customers,
-                "returning_customers": returning_customers,
-                "customer_growth": recent_customers
+                "total_customers": int(total_customers) if total_customers is not None else 0,
+                "recent_customers": int(recent_customers) if recent_customers is not None else 0,
+                "returning_customers": int(returning_customers) if returning_customers is not None else 0,
+                "customer_growth": int(recent_customers) if recent_customers is not None else 0
             }
             
         except Exception as e:
@@ -513,13 +519,13 @@ class AnalyticsService:
                 avg_order_value = 0
 
             return {
-                "total_orders": total_orders,
-                "recent_orders": recent_orders,
-                "paid_orders": paid_orders,
-                "pending_orders": pending_orders,
-                "cancelled_orders": cancelled_orders,
-                "average_order_value": float(avg_order_value),
-                "conversion_rate": (paid_orders / total_orders * 100) if total_orders > 0 else 0
+                "total_orders": int(total_orders) if total_orders is not None else 0,
+                "recent_orders": int(recent_orders) if recent_orders is not None else 0,
+                "paid_orders": int(paid_orders) if paid_orders is not None else 0,
+                "pending_orders": int(pending_orders) if pending_orders is not None else 0,
+                "cancelled_orders": int(cancelled_orders) if cancelled_orders is not None else 0,
+                "average_order_value": float(avg_order_value) if avg_order_value is not None else 0.0,
+                "conversion_rate": float((paid_orders / total_orders * 100) if total_orders > 0 else 0)
             }
             
         except Exception as e:
@@ -580,7 +586,7 @@ class AnalyticsService:
                 })
             
             return {
-                "total_products": total_products,
+                "total_products": int(total_products) if total_products is not None else 0,
                 "best_sellers": best_sellers_list
             }
             
@@ -628,11 +634,11 @@ class AnalyticsService:
             avg_messages_per_session = (total_messages / total_sessions) if total_sessions > 0 else 0
             
             return {
-                "total_chat_sessions": total_sessions,
-                "recent_chat_sessions": recent_sessions,
-                "total_messages": total_messages,
-                "recent_messages": recent_messages,
-                "average_messages_per_session": round(avg_messages_per_session, 2)
+                "total_chat_sessions": int(total_sessions) if total_sessions is not None else 0,
+                "recent_chat_sessions": int(recent_sessions) if recent_sessions is not None else 0,
+                "total_messages": int(total_messages) if total_messages is not None else 0,
+                "recent_messages": int(recent_messages) if recent_messages is not None else 0,
+                "average_messages_per_session": float(round(avg_messages_per_session, 2)) if avg_messages_per_session is not None else 0.0
             }
             
         except Exception as e:

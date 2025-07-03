@@ -115,19 +115,22 @@ def create_app():
     def product_count_filter(business):
         """Get the count of products for a business"""
         from models import Product
-        return Product.objects(business=business).count()
+        count = Product.objects(business=business).count()
+        return int(count) if count is not None else 0
     
     @app.template_filter('order_count')
     def order_count_filter(business):
         """Get the count of orders for a business"""
         from models import Order
-        return Order.objects(business=business).count()
+        count = Order.objects(business=business).count()
+        return int(count) if count is not None else 0
     
     @app.template_filter('category_count')
     def category_count_filter(business):
         """Get the count of categories for a business"""
         from models import Category
-        return Category.objects(business=business).count()
+        count = Category.objects(business=business).count()
+        return int(count) if count is not None else 0
     
     @app.template_filter('category_products')
     def category_products_filter(category):

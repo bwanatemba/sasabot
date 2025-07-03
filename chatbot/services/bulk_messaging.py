@@ -333,6 +333,10 @@ class BulkMessagingService:
                 created_at__gte=start_date
             ).count()
             
+            # Ensure counts are integers
+            total_sessions = int(total_sessions) if total_sessions is not None else 0
+            recent_sessions = int(recent_sessions) if recent_sessions is not None else 0
+            
             # Get unique customers count
             all_sessions = ChatSession.objects(business=business_id)
             unique_customers = len(set([str(session.customer.id) for session in all_sessions if session.customer]))
