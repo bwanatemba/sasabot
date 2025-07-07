@@ -486,13 +486,15 @@ class AnalyticsService:
             export_data = []
             for customer in customers:
                 # Get chat and order statistics
-                chat_sessions_count = ChatSession.objects(
+                chat_sessions_count_qs = ChatSession.objects(
                     Q(business=business_id) & Q(customer=customer.id)
                 ).count()
+                chat_sessions_count = chat_sessions_count_qs if isinstance(chat_sessions_count_qs, int) else 0
                 
-                orders_count = Order.objects(
+                orders_count_qs = Order.objects(
                     Q(business=business_id) & Q(customer=customer.id)
                 ).count()
+                orders_count = orders_count_qs if isinstance(orders_count_qs, int) else 0
                 
                 paid_orders = Order.objects(
                     Q(business=business_id) & 
@@ -591,7 +593,8 @@ class AnalyticsService:
             
             export_data = []
             for session in chat_sessions:
-                message_count = ChatMessage.objects(session=session.id).count()
+                message_count_qs = ChatMessage.objects(session=session.id).count()
+                message_count = message_count_qs if isinstance(message_count_qs, int) else 0
                 
                 export_data.append({
                     "session_id": session.session_id if hasattr(session, 'session_id') else str(session.id),
@@ -675,8 +678,8 @@ class AnalyticsService:
             export_data = []
             for customer in customers:
                 # Get customer's order count and total spent
-                order_count = Order.objects(customer=customer).count()
-                order_count = order_count if isinstance(order_count, int) else 0
+                order_count_qs = Order.objects(customer=customer).count()
+                order_count = order_count_qs if isinstance(order_count_qs, int) else 0
                 
                 paid_orders = Order.objects(customer=customer, payment_status='paid').only('total_amount')
                 total_spent = sum(order.total_amount or 0 for order in paid_orders)
@@ -707,14 +710,14 @@ class AnalyticsService:
             export_data = []
             for business in businesses:
                 # Get business statistics
-                order_count = Order.objects(business=business).count()
-                order_count = order_count if isinstance(order_count, int) else 0
+                order_count_qs = Order.objects(business=business).count()
+                order_count = order_count_qs if isinstance(order_count_qs, int) else 0
                 
                 paid_orders = Order.objects(business=business, payment_status='paid').only('total_amount')
                 total_revenue = sum(order.total_amount or 0 for order in paid_orders)
                 
-                customer_count = ChatSession.objects(business=business).distinct('customer').count()
-                customer_count = customer_count if isinstance(customer_count, int) else 0
+                customer_count_qs = ChatSession.objects(business=business).distinct('customer').count()
+                customer_count = customer_count_qs if isinstance(customer_count_qs, int) else 0
                 
                 export_data.append({
                     "business_id": str(business.id),
@@ -746,12 +749,12 @@ class AnalyticsService:
             export_data = []
             for vendor in vendors:
                 # Get vendor statistics
-                business_count = Business.objects(vendor=vendor).count()
-                business_count = business_count if isinstance(business_count, int) else 0
+                business_count_qs = Business.objects(vendor=vendor).count()
+                business_count = business_count_qs if isinstance(business_count_qs, int) else 0
                 
                 vendor_businesses = Business.objects(vendor=vendor)
-                total_orders = Order.objects(business__in=vendor_businesses).count()
-                total_orders = total_orders if isinstance(total_orders, int) else 0
+                total_orders_qs = Order.objects(business__in=vendor_businesses).count()
+                total_orders = total_orders_qs if isinstance(total_orders_qs, int) else 0
                 
                 paid_orders = Order.objects(business__in=vendor_businesses, payment_status='paid').only('total_amount')
                 total_revenue = sum(order.total_amount or 0 for order in paid_orders)
@@ -783,8 +786,8 @@ class AnalyticsService:
             
             export_data = []
             for session in sessions:
-                message_count = ChatMessage.objects(session=session).count()
-                message_count = message_count if isinstance(message_count, int) else 0
+                message_count_qs = ChatMessage.objects(session=session).count()
+                message_count = message_count_qs if isinstance(message_count_qs, int) else 0
                 
                 export_data.append({
                     "session_id": str(session.id),
