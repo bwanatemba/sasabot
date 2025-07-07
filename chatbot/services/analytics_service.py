@@ -652,7 +652,7 @@ class AnalyticsService:
                     "business_name": order.business.name if order.business else '',
                     "vendor_name": order.business.vendor.name if order.business and order.business.vendor else '',
                     "customer_name": order.customer.name if order.customer else '',
-                    "customer_phone": order.customer.phone if order.customer else '',
+                    "customer_phone": order.customer.phone_number if order.customer else '',
                     "total_amount": float(order.total_amount) if order.total_amount else 0.0,
                     "payment_status": order.payment_status,
                     "order_status": order.status,
@@ -684,12 +684,12 @@ class AnalyticsService:
                 export_data.append({
                     "customer_id": str(customer.id),
                     "name": customer.name,
-                    "phone": customer.phone,
+                    "phone": customer.phone_number,
                     "email": customer.email or '',
                     "order_count": order_count,
                     "total_spent": float(total_spent),
                     "created_at": customer.created_at.isoformat(),
-                    "last_activity": customer.last_activity.isoformat() if customer.last_activity else ''
+                    "last_activity": customer.last_activity.isoformat() if hasattr(customer, 'last_activity') and customer.last_activity else ''
                 })
             
             return {"success": True, "data": export_data}
@@ -720,7 +720,7 @@ class AnalyticsService:
                     "business_id": str(business.id),
                     "name": business.name,
                     "vendor_name": business.vendor.name if business.vendor else '',
-                    "phone": business.phone,
+                    "phone": business.whatsapp_number,
                     "email": business.email or '',
                     "category": business.category,
                     "is_active": business.is_active,
@@ -760,13 +760,13 @@ class AnalyticsService:
                     "vendor_id": str(vendor.id),
                     "name": vendor.name,
                     "email": vendor.email,
-                    "phone": vendor.phone or '',
+                    "phone": vendor.phone_number or '',
                     "is_active": vendor.is_active,
                     "business_count": business_count,
                     "total_orders": total_orders,
                     "total_revenue": float(total_revenue),
                     "created_at": vendor.created_at.isoformat(),
-                    "last_login": vendor.last_login.isoformat() if vendor.last_login else ''
+                    "last_login": vendor.last_login.isoformat() if hasattr(vendor, 'last_login') and vendor.last_login else ''
                 })
             
             return {"success": True, "data": export_data}
@@ -791,10 +791,10 @@ class AnalyticsService:
                     "business_name": session.business.name if session.business else '',
                     "vendor_name": session.business.vendor.name if session.business and session.business.vendor else '',
                     "customer_name": session.customer.name if session.customer else '',
-                    "customer_phone": session.customer.phone if session.customer else '',
+                    "customer_phone": session.customer.phone_number if session.customer else '',
                     "message_count": message_count,
                     "created_at": session.created_at.isoformat(),
-                    "last_message": session.last_message_at.isoformat() if session.last_message_at else ''
+                    "last_message": session.last_message_at.isoformat() if hasattr(session, 'last_message_at') and session.last_message_at else ''
                 })
             
             return {"success": True, "data": export_data}
