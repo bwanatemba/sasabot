@@ -125,11 +125,13 @@ class AnalyticsService:
                 }
             
             # Aggregate analytics across all businesses
-            total_customers_qs = ChatSession.objects(business__in=business_ids).distinct('customer').count()
+            total_customers_list = ChatSession.objects(business__in=business_ids).distinct('customer')
+            total_customers_qs = len(total_customers_list) if total_customers_list else 0
             
-            recent_customers_qs = ChatSession.objects(
+            recent_customers_list = ChatSession.objects(
                 Q(business__in=business_ids) & Q(created_at__gte=start_date)
-            ).distinct('customer').count()
+            ).distinct('customer')
+            recent_customers_qs = len(recent_customers_list) if recent_customers_list else 0
             
             total_orders_qs = Order.objects(business__in=business_ids).count()
             recent_orders_qs = Order.objects(
@@ -716,8 +718,9 @@ class AnalyticsService:
                 paid_orders = Order.objects(business=business, payment_status='paid').only('total_amount')
                 total_revenue = sum(order.total_amount or 0 for order in paid_orders)
                 
-                customer_count_qs = ChatSession.objects(business=business).distinct('customer').count()
-                customer_count = customer_count_qs if isinstance(customer_count_qs, int) else 0
+                # Fix: distinct() returns a list, so we need to count the length
+                customer_distinct_list = ChatSession.objects(business=business).distinct('customer')
+                customer_count = len(customer_distinct_list) if customer_distinct_list else 0
                 
                 export_data.append({
                     "business_id": str(business.id),
@@ -824,13 +827,13 @@ class AnalyticsService:
     def _get_customer_analytics(business_id, start_date):
         """Get customer analytics for a business"""
         try:
-            total_customers = ChatSession.objects(business=business_id).distinct('customer').count()
-            total_customers = total_customers if isinstance(total_customers, int) else 0
+            total_customers_list = ChatSession.objects(business=business_id).distinct('customer')
+            total_customers = len(total_customers_list) if total_customers_list else 0
             
-            recent_customers = ChatSession.objects(
+            recent_customers_list = ChatSession.objects(
                 Q(business=business_id) & Q(created_at__gte=start_date)
-            ).distinct('customer').count()
-            recent_customers = recent_customers if isinstance(recent_customers, int) else 0
+            ).distinct('customer')
+            recent_customers = len(recent_customers_list) if recent_customers_list else 0
             
             returning_customers = 0
             customer_growth = (recent_customers / total_customers * 100) if total_customers > 0 else 0
