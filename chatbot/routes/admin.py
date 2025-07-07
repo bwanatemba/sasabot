@@ -487,10 +487,14 @@ def system_reports():
         monthly_analytics = AnalyticsService.get_admin_analytics(30)
         yearly_analytics = AnalyticsService.get_admin_analytics(365)
         
+        # Get current timestamp for report generation time
+        report_timestamp = datetime.now().strftime('%B %d, %Y at %I:%M:%S %p')
+        
         return render_template('admin/system_reports.html',
                              weekly=weekly_analytics,
                              monthly=monthly_analytics,
-                             yearly=yearly_analytics)
+                             yearly=yearly_analytics,
+                             report_timestamp=report_timestamp)
     
     except Exception as e:
         flash(f"Error generating reports: {str(e)}", 'error')
