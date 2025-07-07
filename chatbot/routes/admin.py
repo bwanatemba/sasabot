@@ -445,7 +445,7 @@ def export_analytics():
             result = AnalyticsService.get_export_data(business_id, data_type, None, start_date, end_date)
         else:
             # System-wide export
-            result = {"error": "System-wide export not implemented yet"}
+            result = AnalyticsService.get_system_export_data(data_type, start_date, end_date)
         
         if result.get('success'):
             # Convert to CSV
@@ -458,6 +458,47 @@ def export_analytics():
                 output.seek(0)
                 
                 filename = f"admin_{data_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                
+                return send_file(
+                    io.BytesIO(output.getvalue().encode()),
+                    mimetype='text/csv',
+                    as_attachment=True,
+                    download_name=filename
+                )
+            except ImportError:
+                return jsonify({"error": "CSV export is not available due to missing dependencies"}), 500
+        else:
+            flash(f"Export failed: {result.get('error', 'Unknown error')}", 'error')
+            return redirect(url_for('admin.analytics'))
+    
+    except Exception as e:
+        flash(f"Error: {str(e)}", 'error')
+        return redirect(url_for('admin.analytics'))
+
+@admin_bp.route('/export/<data_type>')
+@admin_required
+def export_data(data_type):
+    """Export system data by type"""
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    from services.analytics_service import AnalyticsService
+    
+    try:
+        # System-wide export
+        result = AnalyticsService.get_system_export_data(data_type, start_date, end_date)
+        
+        if result.get('success'):
+            # Convert to CSV
+            try:
+                import pandas as pd
+                df = pd.DataFrame(result['data'])
+                
+                output = io.StringIO()
+                df.to_csv(output, index=False)
+                output.seek(0)
+                
+                filename = f"system_{data_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
                 
                 return send_file(
                     io.BytesIO(output.getvalue().encode()),
