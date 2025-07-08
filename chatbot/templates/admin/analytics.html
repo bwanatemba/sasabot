@@ -357,13 +357,19 @@ function exportSystemData(type) {
 const orderStatusElement = document.getElementById('orderStatusChart');
 if (orderStatusElement) {
     const orderStatusCtx = orderStatusElement.getContext('2d');
+    
+    // Use safe defaults for chart data
+    const paidOrders = {{ analytics.summary.paid_orders|default(0) }};
+    const totalOrders = {{ analytics.summary.total_orders|default(0) }};
+    const recentOrders = {{ analytics.summary.recent_orders|default(0) }};
+    
     const orderStatusData = {
         labels: ['Paid', 'Pending', 'Recent'],
         datasets: [{
             data: [
-                {{ analytics.summary.paid_orders|default(0) }}, 
-                {{ ((analytics.summary.total_orders|int|default(0)) - (analytics.summary.paid_orders|int|default(0))) }}, 
-                {{ analytics.summary.recent_orders|default(0) }}
+                paidOrders, 
+                totalOrders - paidOrders, 
+                recentOrders
             ],
             backgroundColor: [
                 '#28a745', // paid - green
