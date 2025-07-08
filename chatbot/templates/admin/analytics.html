@@ -304,220 +304,19 @@ function exportSystemData(type) {
 }
 </style>
 
-    <!-- Key Metrics -->
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">KES {{ "%.2f"|format(analytics.summary.total_revenue) }}</h4>
-                            <p class="card-text">Total Revenue</p>
-                        </div>
-                        <i class="fas fa-money-bill-wave fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">{{ analytics.summary.paid_orders }}</h4>
-                            <p class="card-text">Paid Orders</p>
-                        </div>
-                        <i class="fas fa-shopping-cart fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card bg-info text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">KES {{ "%.2f"|format((analytics.summary.total_revenue|float) / (analytics.summary.paid_orders|int) if (analytics.summary.paid_orders|int) > 0 else 0) }}</h4>
-                            <p class="card-text">Avg Order Value</p>
-                        </div>
-                        <i class="fas fa-chart-line fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="card-title mb-0">{{ "%.1f"|format(((analytics.summary.paid_orders|int) / (analytics.summary.total_orders|int) * 100) if (analytics.summary.total_orders|int) > 0 else 0) }}%</h4>
-                            <p class="card-text">Success Rate</p>
-                        </div>
-                        <i class="fas fa-percentage fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Row -->
-    <div class="row mb-4">
-        <!-- Order Status Distribution -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Order Status Distribution</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="orderStatusChart" width="400" height="200"></canvas>
-                    
-                    <!-- Status Details -->
-                    <div class="mt-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-success me-2">Paid</span>
-                            <span>{{ analytics.summary.paid_orders }} orders</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-warning me-2">Pending</span>
-                            <span>{{ (analytics.summary.total_orders|int) - (analytics.summary.paid_orders|int) }} orders</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-info me-2">Recent</span>
-                            <span>{{ analytics.summary.recent_orders }} orders</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Revenue Trends (Placeholder) -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Revenue Trends</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="revenueChart" width="400" height="200"></canvas>
-                    <div class="mt-3 text-center">
-                        <small class="text-muted">Revenue tracking over the last 30 days</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Performance Tables -->
-    <div class="row">
-        <!-- Top Performing Businesses -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Top Performing Businesses</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Business</th>
-                                    <th>Orders</th>
-                                    <th>Revenue</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- This would be populated with actual data in a real implementation -->
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted">
-                                        <i class="fas fa-chart-bar me-2"></i>
-                                        Data analysis in progress
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Top Products -->
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Popular Products</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Business</th>
-                                    <th>Orders</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- This would be populated with actual data in a real implementation -->
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted">
-                                        <i class="fas fa-box me-2"></i>
-                                        Data analysis in progress
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Export Options -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Export Data</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 mb-2">
-                            <button class="btn btn-outline-primary w-100" onclick="exportData('orders')">
-                                <i class="fas fa-download me-2"></i>Export Orders
-                            </button>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <button class="btn btn-outline-success w-100" onclick="exportData('businesses')">
-                                <i class="fas fa-download me-2"></i>Export Businesses
-                            </button>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <button class="btn btn-outline-info w-100" onclick="exportData('vendors')">
-                                <i class="fas fa-download me-2"></i>Export Vendors
-                            </button>
-                        </div>
-                        <div class="col-md-3 mb-2">
-                            <button class="btn btn-outline-warning w-100" onclick="exportData('analytics')">
-                                <i class="fas fa-download me-2"></i>Export Analytics
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+{% if analytics.get('success') or analytics.get('summary') %}
 // Order Status Chart
 const orderStatusCtx = document.getElementById('orderStatusChart').getContext('2d');
 const orderStatusData = {
     labels: ['Paid', 'Pending', 'Recent'],
     datasets: [{
-        data: [{{ analytics.summary.paid_orders }}, {{ (analytics.summary.total_orders|int) - (analytics.summary.paid_orders|int) }}, {{ analytics.summary.recent_orders }}],
+        data: [
+            {{ analytics.summary.paid_orders|default(0) }}, 
+            {{ ((analytics.summary.total_orders|int|default(0)) - (analytics.summary.paid_orders|int|default(0))) }}, 
+            {{ analytics.summary.recent_orders|default(0) }}
+        ],
         backgroundColor: [
             '#28a745', // paid - green
             '#ffc107', // pending - yellow
@@ -594,5 +393,6 @@ function exportData(type) {
     const url = `/admin/export/${type}`;
     window.open(url, '_blank');
 }
+{% endif %}
 </script>
 {% endblock %}
