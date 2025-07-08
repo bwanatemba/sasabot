@@ -187,7 +187,7 @@
                                 <div class="card-body">
                                     <canvas id="revenueChart" width="400" height="200"></canvas>
                                     <div class="mt-3 text-center">
-                                        <small class="text-muted">Revenue tracking over the last 30 days</small>
+                                        <small class="text-muted">Revenue tracking for the last {{ days|default(7) }} days</small>
                                     </div>
                                 </div>
                             </div>
@@ -395,33 +395,49 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Revenue Chart (Mock data)
+        // Revenue Chart (Real data)
         const revenueElement = document.getElementById('revenueChart');
         if (revenueElement) {
             const revenueCtx = revenueElement.getContext('2d');
-            const last30Days = [];
-            const revenueData = [];
-
-            // Generate mock data for the last 30 days
-            for (let i = 29; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                last30Days.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-                revenueData.push(Math.random() * 10000); // Mock revenue data
+            
+            // Use real revenue data from backend
+            const revenueChartData = {{ analytics.revenue_chart_data|default({})|tojson }};
+            
+            // Prepare chart data
+            let chartLabels = [];
+            let chartData = [];
+            
+            if (revenueChartData && revenueChartData.labels && revenueChartData.data) {
+                chartLabels = revenueChartData.labels;
+                chartData = revenueChartData.data;
+            } else {
+                // Fallback: create empty chart with period labels
+                const days = {{ days|default(7) }};
+                for (let i = days - 1; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    chartLabels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+                    chartData.push(0);
+                }
             }
 
             new Chart(revenueCtx, {
                 type: 'line',
                 data: {
-                    labels: last30Days,
+                    labels: chartLabels,
                     datasets: [{
                         label: 'Daily Revenue (KES)',
-                        data: revenueData,
+                        data: chartData,
                         borderColor: '#007bff',
                         backgroundColor: 'rgba(0, 123, 255, 0.1)',
                         borderWidth: 2,
                         fill: true,
-                        tension: 0.4
+                        tension: 0.4,
+                        pointBackgroundColor: '#007bff',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     }]
                 },
                 options: {
@@ -430,6 +446,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     plugins: {
                         legend: {
                             display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Revenue: KES ' + context.parsed.y.toLocaleString();
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -439,6 +462,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 callback: function(value) {
                                     return 'KES ' + value.toLocaleString();
                                 }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
                             }
                         }
                     }

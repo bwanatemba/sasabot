@@ -354,6 +354,13 @@ class AnalyticsService:
                 logger.error(f"Error getting top businesses: {str(e)}")
                 top_businesses_list = []
             
+            # Get revenue chart data
+            try:
+                revenue_chart_data = AnalyticsService._get_revenue_chart_data(days)
+            except Exception as e:
+                logger.error(f"Error getting revenue chart data: {str(e)}")
+                revenue_chart_data = {'labels': [], 'data': []}
+            
             return {
                 "success": True,
                 "period_days": days,
@@ -372,7 +379,8 @@ class AnalyticsService:
                     "total_chat_sessions": total_chat_sessions,
                     "recent_chat_sessions": recent_chat_sessions
                 },
-                "top_businesses": top_businesses_list
+                "top_businesses": top_businesses_list,
+                "revenue_chart_data": revenue_chart_data
             }
             
         except Exception as e:
@@ -397,7 +405,8 @@ class AnalyticsService:
                     "total_chat_sessions": 0,
                     "recent_chat_sessions": 0
                 },
-                "top_businesses": []
+                "top_businesses": [],
+                "revenue_chart_data": {"labels": [], "data": []}
             }
     
     @staticmethod
@@ -947,3 +956,55 @@ class AnalyticsService:
         except Exception as e:
             logger.error(f"Error getting revenue analytics: {str(e)}")
             return {"total_revenue": 0.0, "recent_revenue": 0.0, "daily_revenue": []}
+
+    @staticmethod
+    def _get_revenue_chart_data(days=30):
+        """Generate daily revenue data for charts"""
+        try:
+            end_date = datetime.utcnow()
+            start_date = end_date - timedelta(days=days)
+            
+            # Create date range for the chart
+            date_range = []
+            current_date = start_date
+            while current_date <= end_date:
+                date_range.append(current_date.date())
+                current_date += timedelta(days=1)
+            
+            # Initialize revenue data for each day
+            revenue_by_date = {date: 0 for date in date_range}
+            
+            # Get all paid orders within the date range
+            paid_orders = Order.objects(
+                Q(payment_status='paid') & 
+                Q(created_at__gte=start_date) & 
+                Q(created_at__lte=end_date)
+            ).only('total_amount', 'created_at')
+            
+            # Group orders by date and sum revenue
+            for order in paid_orders:
+                if order.created_at and order.total_amount:
+                    order_date = order.created_at.date()
+                    if order_date in revenue_by_date:
+                        revenue_by_date[order_date] += float(order.total_amount)
+            
+            # Format data for chart
+            labels = []
+            data = []
+            
+            for date in date_range:
+                labels.append(date.strftime('%b %d'))
+                data.append(revenue_by_date[date])
+            
+            return {
+                'labels': labels,
+                'data': data
+            }
+            
+        except Exception as e:
+            logger.error(f"Error generating revenue chart data: {str(e)}")
+            # Return empty chart data as fallback
+            return {
+                'labels': [],
+                'data': []
+            }

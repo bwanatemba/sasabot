@@ -334,7 +334,8 @@ def analytics():
                     'total_chat_sessions': 0,
                     'recent_chat_sessions': 0
                 },
-                'top_businesses': []
+                'top_businesses': [],
+                'revenue_chart_data': {'labels': [], 'data': []}
             }
         
         return render_template('admin/analytics.html', 
@@ -362,7 +363,8 @@ def analytics():
                 'total_chat_sessions': 0,
                 'recent_chat_sessions': 0
             },
-            'top_businesses': []
+            'top_businesses': [],
+            'revenue_chart_data': {'labels': [], 'data': []}
         }
         return render_template('admin/analytics.html', 
                              analytics=analytics_data,
