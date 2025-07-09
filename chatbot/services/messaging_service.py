@@ -538,35 +538,37 @@ def handle_button_response(phone_number, button_id):
         
         elif button_id.startswith("category_"):
             from services.openai_service import handle_category_selection
-            category_id = int(button_id.split("_")[1])
+            category_id = button_id.split("_")[1]  # Keep as string for MongoDB ObjectId
             return handle_category_selection(phone_number, category_id)
         
         elif button_id.startswith("buy_"):
-            product_id = int(button_id.split("_")[1])
+            product_id = button_id.split("_")[1]  # Keep as string for MongoDB ObjectId
             return initiate_product_purchase(phone_number, product_id)
         
         elif button_id.startswith("variation_"):
-            variation_id = int(button_id.split("_")[1])
+            variation_id = button_id.split("_")[1]  # Keep as string for MongoDB ObjectId
             return initiate_variation_purchase(phone_number, variation_id)
         
         elif button_id.startswith("variations_"):
-            product_id = int(button_id.split("_")[1])
+            product_id = button_id.split("_")[1]  # Keep as string for MongoDB ObjectId
             return handle_product_variations(phone_number, product_id)
         
         elif button_id.startswith("more_variations_"):
-            product_id = int(button_id.split("_")[2])
-            return show_more_variations(phone_number, product_id)
+            parts = button_id.split("_")
+            product_id = parts[2]  # Keep as string for MongoDB ObjectId
+            page = int(parts[3]) if len(parts) > 3 else 1
+            return show_more_variations(phone_number, product_id, page)
         
         elif button_id.startswith("customize_"):
-            product_id = int(button_id.split("_")[1])
+            product_id = button_id.split("_")[1]  # Keep as string for MongoDB ObjectId
             return handle_product_customization(phone_number, product_id)
         
         elif button_id.startswith("confirm_order_"):
-            order_id = int(button_id.split("_")[2])
+            order_id = button_id.split("_")[2]  # Keep as string for MongoDB ObjectId
             return confirm_order_placement(phone_number, order_id)
         
         elif button_id.startswith("cancel_order_"):
-            order_id = int(button_id.split("_")[2])
+            order_id = button_id.split("_")[2]  # Keep as string for MongoDB ObjectId
             return cancel_order(phone_number, order_id)
         
         elif button_id == "dashboard_login":
