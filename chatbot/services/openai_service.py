@@ -96,14 +96,14 @@ def process_gpt_interaction(phone_number, message, business_id=None):
             )
             session.save()
         
-        # Save customer message using MongoEngine
+        # Save customer message using MongoEngine (embedded in session)
         from models import ChatMessage
         customer_message = ChatMessage(
-            session=session.id,
             sender_type='customer',
             message_text=message
         )
-        customer_message.save()
+        session.messages.append(customer_message)
+        session.save()
         
         # Get business custom instructions
         custom_instructions = business.custom_instructions or "You are a helpful customer service assistant."
@@ -139,13 +139,13 @@ def process_gpt_interaction(phone_number, message, business_id=None):
         
         gpt_response = response.choices[0].message.content
         
-        # Save GPT response using MongoEngine
+        # Save GPT response using MongoEngine (embedded in session)
         gpt_message = ChatMessage(
-            session=session.id,
             sender_type='gpt',
             message_text=gpt_response
         )
-        gpt_message.save()
+        session.messages.append(gpt_message)
+        session.save()
         
         # Send response via WhatsApp
         from services.messaging_service import send_whatsapp_text_message
