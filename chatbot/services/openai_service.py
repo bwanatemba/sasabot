@@ -130,7 +130,7 @@ def process_gpt_interaction(phone_number, message, business_id=None):
         
         # General GPT response
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="ft:gpt-3.5-turbo-1106:meira-africa-education-solutions::AzJSAPGn",
             messages=[
                 {"role": "system", "content": f"{business_context}\n\nYou are a customer service assistant for {business.name}. Use the custom instructions to guide your responses. Keep responses helpful and business-focused."},
                 {"role": "user", "content": message}
