@@ -277,8 +277,14 @@ def generate_order_receipt_pdf(order_id):
         for item in order.order_items:
             product_name = item.product.name
             if item.variation_id:
-                variation = item.variation
-                product_name += f" ({variation.name})"
+                # Find the variation in the product's variations list
+                variation = None
+                for var in item.product.variations:
+                    if var.variation_id == item.variation_id:
+                        variation = var
+                        break
+                if variation:
+                    product_name += f" ({variation.name})"
             
             c.drawString(50, y_position, f"{item.quantity}x {product_name}")
             c.drawString(400, y_position, f"${item.total_price:.2f}")
@@ -637,7 +643,8 @@ def handle_product_variations(phone_number, product_id):
     if not product:
         return send_whatsapp_text_message(phone_number, "Product not found.")
     
-    variations = ProductVariation.objects(product=product_id, is_active=True).all()
+    # Get variations from the product's embedded variations list
+    variations = [var for var in product.variations if var.is_active]
     
     if not variations:
         return send_whatsapp_text_message(phone_number, "No variations available for this product.")
@@ -647,7 +654,7 @@ def handle_product_variations(phone_number, product_id):
     for variation in variations[:3]:
         buttons.append({
             "text": f"{variation.name} - ${variation.price:.2f}",
-            "id": f"variation_{variation.id}"
+            "id": f"variation_{variation.variation_id}"
         })
     
     if len(variations) > 3:
@@ -920,11 +927,20 @@ def initiate_variation_purchase(phone_number, variation_id):
     """Initiate purchase for a product variation"""
     
     try:
-        variation = ProductVariation.objects(id=variation_id).first()
-        if not variation or not variation.is_active:
-            return send_whatsapp_text_message(phone_number, "Sorry, this variation is not available.")
+        # Find the product that contains this variation
+        product = Product.objects(variations__variation_id=variation_id).first()
+        if not product:
+            return send_whatsapp_text_message(phone_number, "Product not found.")
         
-        product = variation.product
+        # Find the specific variation
+        variation = None
+        for var in product.variations:
+            if var.variation_id == variation_id and var.is_active:
+                variation = var
+                break
+        
+        if not variation:
+            return send_whatsapp_text_message(phone_number, "Sorry, this variation is not available.")
         
         # Get or create customer
         customer = Customer.objects(phone_number=phone_number).first()
@@ -935,7 +951,7 @@ def initiate_variation_purchase(phone_number, variation_id):
         # Create order with embedded order item
         order_item = OrderItem(
             product=product.id,
-            variation_id=str(variation.id),
+            variation_id=variation_id,
             quantity=1,
             unit_price=variation.price,
             total_price=variation.price
@@ -976,8 +992,14 @@ def show_order_confirmation(phone_number, order_id):
         for item in order.order_items:
             product_name = item.product.name
             if item.variation_id:
-                variation = item.variation
-                product_name += f" ({variation.name})"
+                # Find the variation in the product's variations list
+                variation = None
+                for var in item.product.variations:
+                    if var.variation_id == item.variation_id:
+                        variation = var
+                        break
+                if variation:
+                    product_name += f" ({variation.name})"
             order_summary += f"• {item.quantity}x {product_name} - ${item.total_price:.2f}\n"
         
         order_summary += f"\n*Total: ${order.total_amount:.2f}*\n\n"
@@ -1055,7 +1077,8 @@ def show_more_variations(phone_number, product_id, page=1):
         if not product:
             return send_whatsapp_text_message(phone_number, "Product not found.")
         
-        variations = ProductVariation.objects(product=product_id, is_active=True).all()
+        # Get active variations from the product's embedded variations list
+        variations = [var for var in product.variations if var.is_active]
         
         # Calculate pagination
         per_page = 3
@@ -1071,7 +1094,7 @@ def show_more_variations(phone_number, product_id, page=1):
         for variation in page_variations:
             buttons.append({
                 "text": f"{variation.name} - ${variation.price:.2f}",
-                "id": f"variation_{variation.id}"
+                "id": f"variation_{variation.variation_id}"
             })
         
         # Add navigation buttons if needed
