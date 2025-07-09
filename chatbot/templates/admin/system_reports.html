@@ -91,9 +91,9 @@
                                         </tr>
                                         <tr>
                                             <td><strong>Paid Orders</strong></td>
-                                            <td class="text-center">{{ weekly.summary.paid_orders if weekly.summary else 0 }}</td>
-                                            <td class="text-center">{{ monthly.summary.paid_orders if monthly.summary else 0 }}</td>
-                                            <td class="text-center">{{ yearly.summary.paid_orders if yearly.summary else 0 }}</td>
+                                            <td class="text-center">{{ (weekly.summary.paid_orders|int) if weekly.summary else 0 }}</td>
+                                            <td class="text-center">{{ (monthly.summary.paid_orders|int) if monthly.summary else 0 }}</td>
+                                            <td class="text-center">{{ (yearly.summary.paid_orders|int) if yearly.summary else 0 }}</td>
                                         </tr>
                                         <tr class="table-success">
                                             <td><strong>Total Revenue</strong></td>
