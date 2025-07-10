@@ -97,15 +97,15 @@
                                         </tr>
                                         <tr class="table-success">
                                             <td><strong>Total Revenue</strong></td>
-                                            <td class="text-center">${{ "%.2f"|format(weekly.summary.total_revenue if weekly.summary else 0) }}</td>
-                                            <td class="text-center">${{ "%.2f"|format(monthly.summary.total_revenue if monthly.summary else 0) }}</td>
-                                            <td class="text-center">${{ "%.2f"|format(yearly.summary.total_revenue if yearly.summary else 0) }}</td>
+                                            <td class="text-center">KES {{ "%.2f"|format(weekly.summary.total_revenue if weekly.summary else 0) }}</td>
+                                            <td class="text-center">KES {{ "%.2f"|format(monthly.summary.total_revenue if monthly.summary else 0) }}</td>
+                                            <td class="text-center">KES {{ "%.2f"|format(yearly.summary.total_revenue if yearly.summary else 0) }}</td>
                                         </tr>
                                         <tr class="table-info">
                                             <td><strong>Recent Revenue</strong></td>
-                                            <td class="text-center">${{ "%.2f"|format(weekly.summary.recent_revenue if weekly.summary else 0) }}</td>
-                                            <td class="text-center">${{ "%.2f"|format(monthly.summary.recent_revenue if monthly.summary else 0) }}</td>
-                                            <td class="text-center">${{ "%.2f"|format(yearly.summary.recent_revenue if yearly.summary else 0) }}</td>
+                                            <td class="text-center">KES {{ "%.2f"|format(weekly.summary.recent_revenue if weekly.summary else 0) }}</td>
+                                            <td class="text-center">KES {{ "%.2f"|format(monthly.summary.recent_revenue if monthly.summary else 0) }}</td>
+                                            <td class="text-center">KES {{ "%.2f"|format(yearly.summary.recent_revenue if yearly.summary else 0) }}</td>
                                         </tr>
                                         <tr>
                                             <td><strong>Chat Sessions</strong></td>
@@ -134,7 +134,7 @@
                                             <small>Success Rate</small>
                                         </div>
                                         <div class="col-6 mb-2">
-                                            <h5 class="text-info">${{ "%.2f"|format((weekly.summary.total_revenue|float) / (weekly.summary.paid_orders|int) if (weekly.summary.paid_orders|int) > 0 else 0) }}</h5>
+                                            <h5 class="text-info">KES {{ "%.2f"|format((weekly.summary.total_revenue|float) / (weekly.summary.paid_orders|int) if (weekly.summary.paid_orders|int) > 0 else 0) }}</h5>
                                             <small>Avg Order Value</small>
                                         </div>
                                         <div class="col-6">
@@ -142,7 +142,7 @@
                                             <small>Daily New Customers</small>
                                         </div>
                                         <div class="col-6">
-                                            <h6 class="text-danger">${{ "%.2f"|format((weekly.summary.recent_revenue|float) / 7 if weekly.summary.recent_revenue else 0) }}</h6>
+                                            <h6 class="text-danger">KES {{ "%.2f"|format((weekly.summary.recent_revenue|float) / 7 if weekly.summary.recent_revenue else 0) }}</h6>
                                             <small>Daily Revenue</small>
                                         </div>
                                     </div>
@@ -166,7 +166,7 @@
                                             <small>Success Rate</small>
                                         </div>
                                         <div class="col-6 mb-2">
-                                            <h5 class="text-info">${{ "%.2f"|format((monthly.summary.total_revenue|float) / (monthly.summary.paid_orders|int) if (monthly.summary.paid_orders|int) > 0 else 0) }}</h5>
+                                            <h5 class="text-info">KES {{ "%.2f"|format((monthly.summary.total_revenue|float) / (monthly.summary.paid_orders|int) if (monthly.summary.paid_orders|int) > 0 else 0) }}</h5>
                                             <small>Avg Order Value</small>
                                         </div>
                                         <div class="col-6">
@@ -174,7 +174,7 @@
                                             <small>Daily New Customers</small>
                                         </div>
                                         <div class="col-6">
-                                            <h6 class="text-danger">${{ "%.2f"|format((monthly.summary.recent_revenue|float) / 30 if monthly.summary.recent_revenue else 0) }}</h6>
+                                            <h6 class="text-danger">KES {{ "%.2f"|format((monthly.summary.recent_revenue|float) / 30 if monthly.summary.recent_revenue else 0) }}</h6>
                                             <small>Daily Revenue</small>
                                         </div>
                                     </div>
@@ -198,7 +198,7 @@
                                             <small>Success Rate</small>
                                         </div>
                                         <div class="col-6 mb-2">
-                                            <h5 class="text-info">${{ "%.2f"|format((yearly.summary.total_revenue|float) / (yearly.summary.paid_orders|int) if (yearly.summary.paid_orders|int) > 0 else 0) }}</h5>
+                                            <h5 class="text-info">KES {{ "%.2f"|format((yearly.summary.total_revenue|float) / (yearly.summary.paid_orders|int) if (yearly.summary.paid_orders|int) > 0 else 0) }}</h5>
                                             <small>Avg Order Value</small>
                                         </div>
                                         <div class="col-6">
@@ -206,7 +206,7 @@
                                             <small>Daily New Customers</small>
                                         </div>
                                         <div class="col-6">
-                                            <h6 class="text-danger">${{ "%.2f"|format((yearly.summary.recent_revenue|float) / 365 if yearly.summary.recent_revenue else 0) }}</h6>
+                                            <h6 class="text-danger">KES {{ "%.2f"|format((yearly.summary.recent_revenue|float) / 365 if yearly.summary.recent_revenue else 0) }}</h6>
                                             <small>Daily Revenue</small>
                                         </div>
                                     </div>
@@ -239,7 +239,7 @@
                                                                 <h6 class="mb-0">{{ business.business_name }}</h6>
                                                                 <small class="text-muted">{{ business.order_count }} orders</small>
                                                             </div>
-                                                            <span class="badge bg-success">${{ "%.2f"|format(business.revenue) }}</span>
+                                                            <span class="badge bg-success">KES {{ "%.2f"|format(business.revenue) }}</span>
                                                         </div>
                                                     </div>
                                                     {% endfor %}
@@ -267,7 +267,7 @@
                                                                 <h6 class="mb-0">{{ business.business_name }}</h6>
                                                                 <small class="text-muted">{{ business.order_count }} orders</small>
                                                             </div>
-                                                            <span class="badge bg-success">${{ "%.2f"|format(business.revenue) }}</span>
+                                                            <span class="badge bg-success">KES {{ "%.2f"|format(business.revenue) }}</span>
                                                         </div>
                                                     </div>
                                                     {% endfor %}
@@ -295,7 +295,7 @@
                                                                 <h6 class="mb-0">{{ business.business_name }}</h6>
                                                                 <small class="text-muted">{{ business.order_count }} orders</small>
                                                             </div>
-                                                            <span class="badge bg-success">${{ "%.2f"|format(business.revenue) }}</span>
+                                                            <span class="badge bg-success">KES {{ "%.2f"|format(business.revenue) }}</span>
                                                         </div>
                                                     </div>
                                                     {% endfor %}

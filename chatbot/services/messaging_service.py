@@ -287,13 +287,13 @@ def generate_order_receipt_pdf(order_id):
                     product_name += f" ({variation.name})"
             
             c.drawString(50, y_position, f"{item.quantity}x {product_name}")
-            c.drawString(400, y_position, f"${item.total_price:.2f}")
+            c.drawString(400, y_position, f"KES {item.total_price:.2f}")
             y_position -= 15
         
         # Total
         y_position -= 20
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, y_position, f"Total: ${order.total_amount:.2f}")
+        c.drawString(50, y_position, f"Total: KES {order.total_amount:.2f}")
         
         # Customization notes
         if order.customization_notes:
@@ -362,7 +362,7 @@ def handle_payment_confirmation(phone_number, order_id, mpesa_transaction_id):
         # Send confirmation message
         confirmation_msg = f"✅ Payment confirmed!\n\n"
         confirmation_msg += f"Order: #{order.order_number}\n"
-        confirmation_msg += f"Amount: ${order.total_amount:.2f}\n"
+        confirmation_msg += f"Amount: KES {order.total_amount:.2f}\n"
         confirmation_msg += f"Transaction ID: {mpesa_transaction_id}\n\n"
         confirmation_msg += "Your order is now being processed. You'll receive updates on this number."
         
@@ -653,7 +653,7 @@ def handle_product_variations(phone_number, product_id):
     buttons = []
     for variation in variations[:3]:
         buttons.append({
-            "text": f"{variation.name} - ${variation.price:.2f}",
+            "text": f"{variation.name} - KES {variation.price:.2f}",
             "id": f"variation_{variation.variation_id}"
         })
     
@@ -826,7 +826,7 @@ def handle_mpesa_payment_request(phone_number, mpesa_number):
         if payment_result.get('success'):
             message = f"💳 Payment request sent to {clean_mpesa}\n\n"
             message += f"Order: #{pending_order.order_number}\n"
-            message += f"Amount: ${pending_order.total_amount:.2f}\n\n"
+            message += f"Amount: KES {pending_order.total_amount:.2f}\n\n"
             message += "Please check your phone and enter your MPESA PIN to complete the payment."
             
             return send_whatsapp_text_message(phone_number, message)
@@ -1000,9 +1000,9 @@ def show_order_confirmation(phone_number, order_id):
                         break
                 if variation:
                     product_name += f" ({variation.name})"
-            order_summary += f"• {item.quantity}x {product_name} - ${item.total_price:.2f}\n"
+            order_summary += f"• {item.quantity}x {product_name} - KES {item.total_price:.2f}\n"
         
-        order_summary += f"\n*Total: ${order.total_amount:.2f}*\n\n"
+        order_summary += f"\n*Total: KES {order.total_amount:.2f}*\n\n"
         order_summary += "Please confirm your order to proceed with payment."
         
         # Create confirmation buttons
@@ -1039,7 +1039,7 @@ def confirm_order_placement(phone_number, order_id):
         # Send payment instructions
         payment_message = f"💳 *Payment Required*\n\n"
         payment_message += f"Order: #{order.order_number}\n"
-        payment_message += f"Amount: ${order.total_amount:.2f}\n\n"
+        payment_message += f"Amount: KES {order.total_amount:.2f}\n\n"
         payment_message += "Please reply with your MPESA number (e.g., 0712345678) to receive a payment prompt."
         
         return send_whatsapp_text_message(phone_number, payment_message)
@@ -1093,7 +1093,7 @@ def show_more_variations(phone_number, product_id, page=1):
         buttons = []
         for variation in page_variations:
             buttons.append({
-                "text": f"{variation.name} - ${variation.price:.2f}",
+                "text": f"{variation.name} - KES {variation.price:.2f}",
                 "id": f"variation_{variation.variation_id}"
             })
         

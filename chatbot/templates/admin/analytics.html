@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 
 {% block title %}System Analytics{% endblock %}
-
-{% block content %}
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0">KES {{ "%.2f"|format(analytics.summary.total_revenue|default(0)|float) }}</h3>
+                                    <p class="mb-0">Total Revenue</p>
+                                    <small>+KES {{ "%.2f"|format(analytics.summary.recent_revenue|default(0)|float) }} recent</small>
+                                </div>block content %}
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
@@ -77,9 +80,9 @@
                         <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                             <div class="card bg-gradient-danger text-white">
                                 <div class="card-body text-center">
-                                    <h3 class="mb-0">${{ "%.2f"|format(analytics.summary.total_revenue|default(0)|float) }}</h3>
+                                    <h3 class="mb-0">KES {{ "%.2f"|format(analytics.summary.total_revenue|default(0)|float) }}</h3>
                                     <p class="mb-0 small">Revenue</p>
-                                    <small>+${{ "%.2f"|format(analytics.summary.recent_revenue|default(0)|float) }} recent</small>
+                                    <small>+KES {{ "%.2f"|format(analytics.summary.recent_revenue|default(0)|float) }} recent</small>
                                 </div>
                             </div>
                         </div>
@@ -133,15 +136,15 @@
                                 <div class="card-body">
                                     <div class="mb-3">
                                         <small class="text-muted">Total Revenue</small>
-                                        <h4 class="text-success">${{ "%.2f"|format(analytics.summary.total_revenue|default(0)|float) }}</h4>
+                                        <h4 class="text-success">KES {{ "%.2f"|format(analytics.summary.total_revenue|default(0)|float) }}</h4>
                                     </div>
                                     <div class="mb-3">
                                         <small class="text-muted">Recent Revenue ({{ days|default(7) }}d)</small>
-                                        <h5 class="text-info">${{ "%.2f"|format(analytics.summary.recent_revenue|default(0)|float) }}</h5>
+                                        <h5 class="text-info">KES {{ "%.2f"|format(analytics.summary.recent_revenue|default(0)|float) }}</h5>
                                     </div>
                                     <div class="mb-3">
                                         <small class="text-muted">Avg Revenue per Business</small>
-                                        <h6>${{ "%.2f"|format((analytics.summary.total_revenue|default(0)|float) / (analytics.summary.total_businesses|default(1)|int) if (analytics.summary.total_businesses|default(0)|int) > 0 else 0) }}</h6>
+                                        <h6>KES {{ "%.2f"|format((analytics.summary.total_revenue|default(0)|float) / (analytics.summary.total_businesses|default(1)|int) if (analytics.summary.total_businesses|default(0)|int) > 0 else 0) }}</h6>
                                     </div>
                                 </div>
                             </div>
@@ -221,7 +224,7 @@
                                                 <span class="badge bg-primary">{{ business.order_count }}</span>
                                             </td>
                                             <td>
-                                                <strong class="text-success">${{ "%.2f"|format(business.revenue) }}</strong>
+                                                <strong class="text-success">KES {{ "%.2f"|format(business.revenue) }}</strong>
                                             </td>
                                             <td>
                                                 <a href="{{ url_for('admin.business_detail', business_id=business.business_id) }}" 

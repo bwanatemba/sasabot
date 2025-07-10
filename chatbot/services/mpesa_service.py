@@ -244,7 +244,7 @@ def create_order_and_initiate_payment(phone_number, product_id, business_id, cus
         if payment_result['success']:
             send_whatsapp_text_message(
                 phone_number, 
-                f"Please complete payment of KSH {unit_price:.2f} for your order {order.order_number}. Check your phone for the Mpesa prompt."
+                f"Please complete payment of KES {unit_price:.2f} for your order {order.order_number}. Check your phone for the Mpesa prompt."
             )
         else:
             order.status = 'cancelled'

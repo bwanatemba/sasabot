@@ -238,7 +238,7 @@ def handle_product_details(phone_number, product_id, business_id):
         buttons.append({"text": "Add Customization", "id": f"customize_{product.id}"})
     
     # Prepare body text
-    body = f"{product.name}\n${product.price:.2f}\n{product.description or ''}"
+    body = f"{product.name}\nKES {product.price:.2f}\n{product.description or ''}"
     
     from services.messaging_service import send_whatsapp_interactive_message
     return send_whatsapp_interactive_message(
@@ -264,7 +264,7 @@ def handle_category_selection(phone_number, category_id):
     for product in products:
         product_list += f"ID: {product.product_id}\n"
         product_list += f"Name: {product.name}\n"
-        product_list += f"Price: ${product.price:.2f}\n\n"
+        product_list += f"Price: KES {product.price:.2f}\n\n"
     
     product_list += "Reply with a product ID to see details and purchase options."
     

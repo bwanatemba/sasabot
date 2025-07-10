@@ -36,7 +36,7 @@
                             <h5 class="card-title">{{ product.name }}</h5>
                             <p class="card-text">{{ product.description or 'No description available' }}</p>
                             <p class="card-text">
-                                <strong>Base Price:</strong> KSh {{ "%.2f"|format(product.price) }}<br>
+                                <strong>Base Price:</strong> KES {{ "%.2f"|format(product.price) }}<br>
                                 <strong>Product ID:</strong> {{ product.product_id }}<br>
                                 <strong>Status:</strong> 
                                 <span class="badge bg-{{ 'success' if product.is_active else 'secondary' }}">
@@ -69,7 +69,7 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="mb-3">
-                                    <label for="variation_price" class="form-label">Price (KSh)</label>
+                                    <label for="variation_price" class="form-label">Price (KES)</label>
                                     <input type="number" class="form-control" id="variation_price" name="variation_price" 
                                            step="0.01" min="0" placeholder="0.00" required>
                                 </div>
@@ -127,7 +127,7 @@
                                             <strong>{{ variation.name }}</strong>
                                         </td>
                                         <td>
-                                            <span class="text-success fw-bold">KSh {{ "%.2f"|format(variation.price) }}</span>
+                                            <span class="text-success fw-bold">KES {{ "%.2f"|format(variation.price) }}</span>
                                         </td>
                                         <td>
                                             <small class="text-muted">{{ variation.description or 'No description' }}</small>

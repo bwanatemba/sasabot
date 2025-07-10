@@ -53,9 +53,9 @@
                         <div class="col-lg-3 col-md-6 mb-3">
                             <div class="card bg-success text-white">
                                 <div class="card-body text-center">
-                                    <h3 class="mb-0">${{ "%.2f"|format(analytics.revenue_analytics.total_revenue) }}</h3>
+                                    <h3 class="mb-0">KES {{ "%.2f"|format(analytics.revenue_analytics.total_revenue) }}</h3>
                                     <p class="mb-0">Total Revenue</p>
-                                    <small>+${{ "%.2f"|format(analytics.revenue_analytics.recent_revenue) }} recent</small>
+                                    <small>+KES {{ "%.2f"|format(analytics.revenue_analytics.recent_revenue) }} recent</small>
                                 </div>
                             </div>
                         </div>
@@ -63,7 +63,7 @@
                         <div class="col-lg-3 col-md-6 mb-3">
                             <div class="card bg-warning text-white">
                                 <div class="card-body text-center">
-                                    <h3 class="mb-0">${{ "%.2f"|format(analytics.order_analytics.average_order_value) }}</h3>
+                                    <h3 class="mb-0">KES {{ "%.2f"|format(analytics.order_analytics.average_order_value) }}</h3>
                                     <p class="mb-0">Avg Order Value</p>
                                     <small>{{ analytics.chat_analytics.total_chat_sessions }} chat sessions</small>
                                 </div>
@@ -150,7 +150,7 @@
                                         <tr>
                                             <td><strong>{{ product.product_name }}</strong></td>
                                             <td><span class="badge bg-primary">{{ product.total_sold }}</span></td>
-                                            <td><strong class="text-success">${{ "%.2f"|format(product.total_revenue) }}</strong></td>
+                                            <td><strong class="text-success">KES {{ "%.2f"|format(product.total_revenue) }}</strong></td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -292,7 +292,7 @@ const chart = new Chart(ctx, {
                 beginAtZero: true,
                 ticks: {
                     callback: function(value) {
-                        return '$' + value.toFixed(2);
+                        return 'KES ' + value.toFixed(2);
                     }
                 }
             }

@@ -198,7 +198,7 @@ def dashboard():
                 <body>
                     <h1>Vendor Dashboard</h1>
                     <p>Orders: {template_vars['total_orders']}</p>
-                    <p>Revenue: KSH {template_vars['total_revenue']}</p>
+                    <p>Revenue: KES {template_vars['total_revenue']}</p>
                     <p>Businesses: {len(template_vars['businesses'])}</p>
                     <a href="/vendor/businesses">View Businesses</a>
                 </body>
