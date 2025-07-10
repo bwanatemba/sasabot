@@ -111,19 +111,44 @@ class MpesaService:
     def process_callback(self, callback_data):
         """Process Mpesa callback"""
         try:
+            logger.info(f"Processing callback data: {callback_data}")
+            
+            # Handle different callback formats
+            if not callback_data:
+                logger.warning("Received empty callback data")
+                return {'success': True, 'message': 'Empty callback processed'}
+            
+            # Check for STK callback format
             stk_callback = callback_data.get('Body', {}).get('stkCallback', {})
+            
+            # If no STK callback, check for direct format
+            if not stk_callback:
+                stk_callback = callback_data.get('stkCallback', {})
+            
+            # If still no STK callback, check if callback_data itself is the callback
+            if not stk_callback and callback_data.get('ResultCode') is not None:
+                stk_callback = callback_data
+            
             result_code = stk_callback.get('ResultCode')
             checkout_request_id = stk_callback.get('CheckoutRequestID')
             
+            logger.info(f"Result code: {result_code}, Checkout request ID: {checkout_request_id}")
+            
             if result_code == 0:
                 # Payment successful
-                callback_metadata = stk_callback.get('CallbackMetadata', {}).get('Item', [])
+                callback_metadata = stk_callback.get('CallbackMetadata', {})
+                if isinstance(callback_metadata, dict):
+                    items = callback_metadata.get('Item', [])
+                else:
+                    items = callback_metadata if isinstance(callback_metadata, list) else []
                 
                 transaction_data = {}
-                for item in callback_metadata:
-                    name = item.get('Name')
-                    value = item.get('Value')
-                    transaction_data[name] = value
+                for item in items:
+                    if isinstance(item, dict):
+                        name = item.get('Name')
+                        value = item.get('Value')
+                        if name:
+                            transaction_data[name] = value
                 
                 # Update order in database
                 self._update_order_payment_status(
@@ -136,13 +161,18 @@ class MpesaService:
                 
                 return {'success': True, 'message': 'Payment processed successfully'}
             else:
-                # Payment failed
-                self._update_order_payment_status(checkout_request_id, 'failed')
-                return {'success': False, 'message': 'Payment failed'}
+                # Payment failed or cancelled
+                result_desc = stk_callback.get('ResultDesc', 'Payment failed')
+                logger.info(f"Payment failed: {result_desc}")
+                
+                if checkout_request_id:
+                    self._update_order_payment_status(checkout_request_id, 'failed')
+                
+                return {'success': True, 'message': f'Payment failed: {result_desc}'}
                 
         except Exception as e:
             logger.error(f"Error processing Mpesa callback: {str(e)}")
-            return {'success': False, 'message': 'Error processing payment callback'}
+            return {'success': True, 'message': 'Error processing payment callback - logged for review'}
     
     def _update_order_payment_status(self, checkout_request_id, status, transaction_id=None, amount=None, phone_number=None):
         """Update order payment status"""

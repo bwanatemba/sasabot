@@ -74,6 +74,11 @@ def create_app():
     # Initialize CSRF Protection
     csrf = CSRFProtect(app)
     
+    # CSRF exemptions for external webhooks
+    csrf.exempt("routes.api.mpesa_callback")
+    csrf.exempt("routes.api.mpesa_webhook")
+    csrf.exempt("routes.api.test_mpesa_callback")
+    
     # File upload configuration
     app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size
     app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')

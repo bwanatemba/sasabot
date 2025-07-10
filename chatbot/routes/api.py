@@ -1,32 +1,72 @@
 from flask import Blueprint, request, jsonify, current_app
 from services.mpesa_service import mpesa_service
 import logging
+import json
+import os
+from urllib.parse import parse_qs
 from flask_login import login_required, current_user
 from models import Order, Customer, Product, Business
 from datetime import datetime, timedelta
 from mongoengine import Q
 from services.auth.auth_manager import get_user_role
+import os
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 logger = logging.getLogger(__name__)
+
+@api_bp.before_request
+def log_api_request():
+    """Log all API requests for debugging"""
+    if request.endpoint and 'mpesa' in request.endpoint:
+        logger.info(f"M-Pesa API Request: {request.method} {request.path}")
+        logger.info(f"Headers: {dict(request.headers)}")
+        logger.info(f"Content-Type: {request.content_type}")
+        if request.data:
+            logger.info(f"Raw data (first 500 chars): {request.data[:500]}")
 
 @api_bp.route('/mpesa/callback', methods=['POST'])
 def mpesa_callback():
     """Handle Mpesa payment callbacks"""
     try:
-        data = request.get_json()
+        # Log raw request data for debugging
+        logger.info(f"Mpesa callback headers: {dict(request.headers)}")
+        logger.info(f"Mpesa callback content type: {request.content_type}")
+        logger.info(f"Mpesa callback raw data: {request.data}")
+        
+        # Try to get JSON data with better error handling
+        if request.content_type and 'application/json' in request.content_type:
+            data = request.get_json()
+        else:
+            # Try to parse as JSON even if content type is not set correctly
+            try:
+                import json
+                data = json.loads(request.data.decode('utf-8'))
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                logger.error(f"Failed to parse callback data as JSON: {str(e)}")
+                # If JSON parsing fails, return success to avoid retries
+                return jsonify({"ResultCode": 0, "ResultDesc": "Accepted - Invalid JSON format"})
+        
+        if not data:
+            logger.warning("Received empty callback data")
+            return jsonify({"ResultCode": 0, "ResultDesc": "Accepted - Empty data"})
+        
         logger.info(f"Received Mpesa callback: {data}")
         
         result = mpesa_service.process_callback(data)
         
-        if result['success']:
-            return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
-        else:
-            return jsonify({"ResultCode": 1, "ResultDesc": "Rejected"})
+        # Ensure proper M-Pesa response format
+        response_data = {
+            "ResultCode": 0 if result.get('success', False) else 1,
+            "ResultDesc": result.get('message', 'Callback processed')
+        }
+        
+        logger.info(f"M-Pesa callback response: {response_data}")
+        return jsonify(response_data)
             
     except Exception as e:
         logger.error(f"Error processing Mpesa callback: {str(e)}")
-        return jsonify({"ResultCode": 1, "ResultDesc": "Error processing callback"})
+        # Return success to avoid retries for parsing errors
+        return jsonify({"ResultCode": 0, "ResultDesc": "Error logged - stopping retries"})
 
 @api_bp.route('/health', methods=['GET'])
 def health_check():
@@ -216,3 +256,74 @@ def dashboard_stats():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
+@api_bp.route('/mpesa/webhook', methods=['POST'])
+def mpesa_webhook():
+    """Alternative M-Pesa webhook endpoint for better compatibility"""
+    try:
+        # Log everything for debugging
+        logger.info(f"Webhook headers: {dict(request.headers)}")
+        logger.info(f"Webhook content type: {request.content_type}")
+        logger.info(f"Webhook method: {request.method}")
+        logger.info(f"Webhook args: {request.args}")
+        logger.info(f"Webhook form: {request.form}")
+        logger.info(f"Webhook raw data: {request.data}")
+        
+        # Try multiple ways to get the data
+        data = None
+        
+        # Method 1: Try JSON
+        if request.is_json:
+            data = request.get_json()
+        
+        # Method 2: Try form data
+        elif request.form:
+            data = dict(request.form)
+        
+        # Method 3: Try raw data as JSON
+        elif request.data:
+            try:
+                data = json.loads(request.data.decode('utf-8'))
+            except:
+                # Method 4: Try URL encoded
+                try:
+                    data = parse_qs(request.data.decode('utf-8'))
+                except:
+                    data = {"raw_data": request.data.decode('utf-8', errors='ignore')}
+        
+        logger.info(f"Parsed webhook data: {data}")
+        
+        if data:
+            result = mpesa_service.process_callback(data)
+            return jsonify({"ResultCode": 0, "ResultDesc": "Webhook processed"})
+        else:
+            logger.warning("No data received in webhook")
+            return jsonify({"ResultCode": 0, "ResultDesc": "No data received"})
+            
+    except Exception as e:
+        logger.error(f"Error in webhook: {str(e)}")
+        return jsonify({"ResultCode": 0, "ResultDesc": "Webhook error logged"})
+
+@api_bp.route('/mpesa/test-callback', methods=['POST', 'GET'])
+def test_mpesa_callback():
+    """Test endpoint to simulate M-Pesa callback"""
+    try:
+        if request.method == 'GET':
+            # Return a simple form for testing
+            return '''
+            <html>
+            <body>
+                <h2>M-Pesa Callback Test</h2>
+                <form method="POST" action="/api/mpesa/test-callback">
+                    <textarea name="callback_data" rows="10" cols="80" placeholder="Paste M-Pesa callback JSON here">{
+  "Body": {
+    "stkCallback": {
+      "MerchantRequestID": "test-123",
+      "CheckoutRequestID": "ws_co_test_123",
+      "ResultCode": 0,
+      "ResultDesc": "The service request is processed successfully.",
+      "CallbackMetadata": {
+        "Item": [
+          {"Name": "Amount", "Value": 100},
+          {"Name": "MpesaReceiptNumber", "Value": "TEST123"},
+          {"Name": "PhoneNumber", "Value": "254712345678"}
