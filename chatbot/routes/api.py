@@ -1,20 +1,4 @@
-from flask i@api_bp.route('/mpesa/callback', methods=['POST'])
-def mpesa_callback():
-    """Handle Mpesa payment callbacks"""
-    try:
-        data = request.get_json()
-        logger.info(f"Received Mpesa callback: {data}")
-        
-        result = mpesa_service.process_callback(data)
-        
-        if result['success']:
-            return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
-        else:
-            return jsonify({"ResultCode": 1, "ResultDesc": "Rejected"})
-            
-    except Exception as e:
-        logger.error(f"Error processing Mpesa callback: {str(e)}")
-        return jsonify({"ResultCode": 1, "ResultDesc": "Error processing callback"})request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app
 from services.mpesa_service import mpesa_service
 import logging
 from flask_login import login_required, current_user
