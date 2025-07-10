@@ -99,22 +99,71 @@ def send_whatsapp_interactive_message(phone_number, header, body, footer, button
     Send an interactive WhatsApp message with buttons
     """
     try:
+        # Validate inputs
+        if not phone_number:
+            raise ValueError("Phone number is required")
+        
+        if not buttons or len(buttons) == 0:
+            raise ValueError("At least one button is required")
+        
+        # Set default values for empty strings
+        header = header or "Message"
+        body = body or "Please select an option"
+        footer = footer or "Choose an option"
+        
+        # Validate WhatsApp configuration
+        if not validate_whatsapp_config():
+            raise ValueError("WhatsApp configuration is incomplete")
+        
         WHATSAPP_API_URL = f"https://graph.facebook.com/v17.0/{os.getenv('WHATSAPP_PHONE_ID')}/messages"
         headers = {
             "Authorization": f"Bearer {os.getenv('WHATSAPP_ACCESS_TOKEN')}",
             "Content-Type": "application/json"
         }
         
+        # Validate and truncate text lengths according to WhatsApp limits
+        # Header: 60 characters max
+        # Body: 1024 characters max  
+        # Footer: 60 characters max
+        # Also remove any characters that might cause issues
+        header_text = header[:60] if len(header) > 60 else header
+        body_text = body[:1024] if len(body) > 1024 else body
+        footer_text = footer[:60] if len(footer) > 60 else footer
+        
+        # Clean text to remove potential problematic characters
+        header_text = header_text.replace('\r\n', '\n').replace('\r', '\n')
+        body_text = body_text.replace('\r\n', '\n').replace('\r', '\n')
+        footer_text = footer_text.replace('\r\n', '\n').replace('\r', '\n')
+        
         # Build buttons array (max 3 buttons for interactive messages)
         button_objects = []
         for i, button in enumerate(buttons[:3]):  # Limit to 3 buttons
+            # Validate button structure
+            if not isinstance(button, dict) or 'text' not in button or 'id' not in button:
+                logger.error(f"Invalid button structure: {button}")
+                continue
+                
+            # WhatsApp button title must be 20 characters or less
+            button_title = button["text"][:20] if len(button["text"]) > 20 else button["text"]
+            # WhatsApp button ID must be 256 characters or less and contain only alphanumeric characters, hyphens, and underscores
+            button_id = button["id"][:256] if len(button["id"]) > 256 else button["id"]
+            
+            if not button_title or not button_id:
+                logger.error(f"Empty button title or ID: {button}")
+                continue
+                
             button_objects.append({
                 "type": "reply",
                 "reply": {
-                    "id": button["id"],
-                    "title": button["text"]
+                    "id": button_id,
+                    "title": button_title
                 }
             })
+        
+        # If no valid buttons, fall back to text message
+        if not button_objects:
+            logger.error("No valid buttons found, falling back to text message")
+            return send_whatsapp_text_message(phone_number, body_text)
         
         # If more than 3 buttons, add "See all options" button
         if len(buttons) > 3:
@@ -135,13 +184,13 @@ def send_whatsapp_interactive_message(phone_number, header, body, footer, button
                 "type": "button",
                 "header": {
                     "type": "text",
-                    "text": header
+                    "text": header_text
                 },
                 "body": {
-                    "text": body
+                    "text": body_text
                 },
                 "footer": {
-                    "text": footer
+                    "text": footer_text
                 },
                 "action": {
                     "buttons": button_objects
@@ -149,13 +198,34 @@ def send_whatsapp_interactive_message(phone_number, header, body, footer, button
             }
         }
         
+        logger.info(f"Sending WhatsApp interactive message payload: {payload}")
         response = requests.post(WHATSAPP_API_URL, json=payload, headers=headers)
+        
+        if response.status_code != 200:
+            logger.error(f"WhatsApp API error response: {response.text}")
+            logger.error(f"WhatsApp API error status: {response.status_code}")
+            logger.error(f"WhatsApp API error payload: {payload}")
+        
         response.raise_for_status()
         return response.json()
         
     except requests.exceptions.RequestException as e:
         logger.error(f"WhatsApp API error: {str(e)}")
-        raise
+        logger.error(f"WhatsApp API error response: {e.response.text if e.response else 'No response'}")
+        
+        # Fallback to text message if interactive message fails
+        fallback_message = f"{header_text}\n\n{body_text}\n\n{footer_text}\n\n"
+        for i, button in enumerate(buttons[:3]):
+            fallback_message += f"{i+1}. {button['text']}\n"
+        fallback_message += "\nPlease reply with the number of your choice."
+        
+        logger.info("Falling back to text message due to interactive message failure")
+        return send_whatsapp_text_message(phone_number, fallback_message)
+    
+    except Exception as e:
+        logger.error(f"Unexpected error in send_whatsapp_interactive_message: {str(e)}", exc_info=True)
+        # Final fallback to simple text message
+        return send_whatsapp_text_message(phone_number, body or "Please try again later.")
 
 def send_whatsapp_text_message(phone_number, message):
     """
@@ -883,19 +953,38 @@ def initiate_product_purchase(phone_number, product_id):
     """Initiate purchase for a product"""
     
     try:
+        logger.info(f"Initiating product purchase for phone: {phone_number}, product_id: {product_id}")
+        
+        # Validate product_id
+        if not product_id:
+            logger.error("Product ID is None or empty")
+            return send_whatsapp_text_message(phone_number, "Product not found.")
+        
         product = Product.objects(id=product_id).first()
-        if not product or not product.is_active:
+        if not product:
+            logger.error(f"Product not found with ID: {product_id}")
+            return send_whatsapp_text_message(phone_number, "Sorry, this product is not available.")
+        
+        if not product.is_active:
+            logger.error(f"Product {product_id} is not active")
             return send_whatsapp_text_message(phone_number, "Sorry, this product is not available.")
         
         # Check if product has variations
-        if product.has_variations:
+        if hasattr(product, 'has_variations') and product.has_variations:
+            logger.info(f"Product {product_id} has variations, showing variations")
             return handle_product_variations(phone_number, product_id)
         
         # Get or create customer
         customer = Customer.objects(phone_number=phone_number).first()
         if not customer:
+            logger.info(f"Creating new customer for phone: {phone_number}")
             customer = Customer(phone_number=phone_number)
             customer.save()
+        
+        # Validate product price
+        if not hasattr(product, 'price') or product.price is None:
+            logger.error(f"Product {product_id} has no price")
+            return send_whatsapp_text_message(phone_number, "Product price not available.")
         
         # Create order with embedded order item
         order_item = OrderItem(
@@ -916,11 +1005,13 @@ def initiate_product_purchase(phone_number, product_id):
         )
         order.save()
         
+        logger.info(f"Order created successfully: {order.id}")
+        
         # Show order confirmation with payment options
         return show_order_confirmation(phone_number, order.id)
         
     except Exception as e:
-        logger.error(f"Error initiating product purchase: {str(e)}")
+        logger.error(f"Error initiating product purchase: {str(e)}", exc_info=True)
         return send_whatsapp_text_message(phone_number, "Sorry, there was an error processing your request.")
 
 def initiate_variation_purchase(phone_number, variation_id):
@@ -979,17 +1070,36 @@ def show_order_confirmation(phone_number, order_id):
     """Show order confirmation with payment options"""
     
     try:
-        order = Order.objects(id=order_id).first()
-        if not order:
+        # Validate order_id
+        if not order_id:
+            logger.error("Order ID is None or empty")
             return send_whatsapp_text_message(phone_number, "Order not found.")
         
+        order = Order.objects(id=order_id).first()
+        if not order:
+            logger.error(f"Order not found with ID: {order_id}")
+            return send_whatsapp_text_message(phone_number, "Order not found.")
+        
+        # Validate required fields
+        if not order.business:
+            logger.error(f"Order {order_id} has no business")
+            return send_whatsapp_text_message(phone_number, "Order information incomplete.")
+        
+        if not order.order_items:
+            logger.error(f"Order {order_id} has no items")
+            return send_whatsapp_text_message(phone_number, "Order has no items.")
+        
         # Build order summary
-        order_summary = f"📋 *Order Summary*\n\n"
+        order_summary = f"Order Summary\n\n"
         order_summary += f"Order #: {order.order_number}\n"
         order_summary += f"Business: {order.business.name}\n\n"
         
-        order_summary += "*Items:*\n"
+        order_summary += "Items:\n"
         for item in order.order_items:
+            if not item.product:
+                logger.error(f"Order item has no product: {item}")
+                continue
+                
             product_name = item.product.name
             if item.variation_id:
                 # Find the variation in the product's variations list
@@ -1002,19 +1112,19 @@ def show_order_confirmation(phone_number, order_id):
                     product_name += f" ({variation.name})"
             order_summary += f"• {item.quantity}x {product_name} - KES {item.total_price:.2f}\n"
         
-        order_summary += f"\n*Total: KES {order.total_amount:.2f}*\n\n"
+        order_summary += f"\nTotal: KES {order.total_amount:.2f}\n\n"
         order_summary += "Please confirm your order to proceed with payment."
         
         # Create confirmation buttons
         buttons = [
-            {"text": "✅ Confirm Order", "id": f"confirm_order_{order.id}"},
-            {"text": "❌ Cancel", "id": f"cancel_order_{order.id}"}
+            {"text": "Confirm Order", "id": f"confirm_order_{order.id}"},
+            {"text": "Cancel", "id": f"cancel_order_{order.id}"}
         ]
         
         # Check if any product in the order allows customization
         has_customizable_product = any(item.product.allows_customization for item in order.order_items)
         if has_customizable_product:
-            buttons.insert(1, {"text": "🎨 Add Customization", "id": f"customize_{order.order_items[0].product.id}"})
+            buttons.insert(1, {"text": "Add Customization", "id": f"customize_{order.order_items[0].product.id}"})
         
         return send_whatsapp_interactive_message(
             phone_number,
@@ -1113,3 +1223,18 @@ def show_more_variations(phone_number, product_id, page=1):
     except Exception as e:
         logger.error(f"Error showing more variations: {str(e)}")
         return send_whatsapp_text_message(phone_number, "Sorry, there was an error processing your request.")
+
+def validate_whatsapp_config():
+    """Validate that WhatsApp configuration is properly set"""
+    required_vars = ['WHATSAPP_PHONE_ID', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_VERIFY_TOKEN']
+    missing_vars = []
+    
+    for var in required_vars:
+        if not os.getenv(var):
+            missing_vars.append(var)
+    
+    if missing_vars:
+        logger.error(f"Missing required WhatsApp environment variables: {missing_vars}")
+        return False
+    
+    return True
