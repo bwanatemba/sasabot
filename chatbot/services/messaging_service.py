@@ -885,12 +885,12 @@ def handle_mpesa_payment_request(phone_number, mpesa_number):
         clean_mpesa = clean_phone_number(mpesa_number)
         
         # Initiate Mpesa payment
-        from services.mpesa_service import initiate_stk_push
-        payment_result = initiate_stk_push(
+        from services.mpesa_service import mpesa_service
+        payment_result = mpesa_service.initiate_stk_push(
             phone_number=clean_mpesa,
             amount=int(pending_order.total_amount),
-            account_reference=pending_order.order_number,
-            transaction_desc=f"Payment for order {pending_order.order_number}"
+            order_id=pending_order.order_number,
+            account_reference=pending_order.order_number
         )
         
         if payment_result.get('success'):
