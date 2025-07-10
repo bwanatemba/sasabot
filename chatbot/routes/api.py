@@ -327,3 +327,40 @@ def test_mpesa_callback():
           {"Name": "Amount", "Value": 100},
           {"Name": "MpesaReceiptNumber", "Value": "TEST123"},
           {"Name": "PhoneNumber", "Value": "254712345678"}
+        ]
+      }
+    }
+  }
+}</textarea>
+                    <br><br>
+                    <input type="submit" value="Test Callback">
+                </form>
+            </body>
+            </html>
+            '''
+        
+        # Handle POST request - simulate callback processing
+        callback_data = request.form.get('callback_data')
+        if callback_data:
+            try:
+                data = json.loads(callback_data)
+                result = mpesa_service.process_callback(data)
+                return jsonify({
+                    "success": True,
+                    "message": "Test callback processed",
+                    "result": result
+                })
+            except json.JSONDecodeError:
+                return jsonify({
+                    "success": False,
+                    "error": "Invalid JSON format"
+                })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "No callback data provided"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in test callback: {str(e)}")
+        return jsonify({"success": False, "error": str(e)})
