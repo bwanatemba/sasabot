@@ -78,6 +78,7 @@ def create_app():
     csrf.exempt("routes.api.mpesa_callback")
     csrf.exempt("routes.api.mpesa_webhook")
     csrf.exempt("routes.api.test_mpesa_callback")
+    csrf.exempt("routes.api.mpesa_callback_simulator")
     
     # File upload configuration
     app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB max file size

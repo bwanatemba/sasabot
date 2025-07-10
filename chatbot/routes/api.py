@@ -349,7 +349,7 @@ def mpesa_webhook():
         return jsonify({"ResultCode": 0, "ResultDesc": "Webhook error logged"})
 
 @api_bp.route('/mpesa/test-callback', methods=['POST', 'GET'])
-def test_mpesa_callback():
+def mpesa_callback_simulator():
     """Test endpoint to simulate M-Pesa callback"""
     try:
         if request.method == 'GET':
