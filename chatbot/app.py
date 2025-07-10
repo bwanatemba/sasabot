@@ -101,11 +101,6 @@ def create_app():
     app.register_blueprint(vendor_bp)
     app.register_blueprint(api_bp)
     
-    # Exempt specific API routes from CSRF protection
-    csrf.exempt(api_bp.view_functions['mpesa_callback'])
-    csrf.exempt(api_bp.view_functions['health_check'])
-    csrf.exempt(api_bp.view_functions['test_webhook'])
-    
     # Template context processors
     @app.context_processor
     def inject_user_role():
