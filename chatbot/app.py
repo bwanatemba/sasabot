@@ -238,7 +238,18 @@ def create_app():
     def handle_whatsapp_webhook():
         if request.method == 'GET':
             return messaging_service.verify_webhook()
-        return messaging_service.process_whatsapp_message(request.json)
+        
+        try:
+            # Get JSON data with error handling
+            data = request.get_json()
+            if data is None:
+                logger.warning("Received WhatsApp webhook with no JSON data")
+                return jsonify({"status": "ok"}), 200
+            
+            return messaging_service.process_whatsapp_message(data)
+        except Exception as e:
+            logger.error(f"Error processing WhatsApp webhook: {str(e)}", exc_info=True)
+            return jsonify({"status": "ok"}), 200
     
     return app
 

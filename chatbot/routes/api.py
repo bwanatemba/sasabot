@@ -34,16 +34,32 @@ def mpesa_callback():
         logger.info(f"Mpesa callback raw data: {request.data}")
         
         # Try to get JSON data with better error handling
+        data = None
         if request.content_type and 'application/json' in request.content_type:
-            data = request.get_json()
-        else:
-            # Try to parse as JSON even if content type is not set correctly
             try:
+                data = request.get_json()
+            except Exception as e:
+                logger.warning(f"Failed to parse JSON with get_json(): {str(e)}")
+        
+        # If get_json() failed or no content type, try manual parsing
+        if data is None:
+            try:
+                raw_data = request.data.decode('utf-8')
+                
+                # Handle template variables that might not be replaced
+                if '{{current_timestamp}}' in raw_data:
+                    logger.info("Replacing template variable {{current_timestamp}}")
+                    from datetime import datetime
+                    timestamp = int(datetime.now().timestamp() * 1000)
+                    raw_data = raw_data.replace('{{current_timestamp}}', str(timestamp))
+                
                 import json
-                data = json.loads(request.data.decode('utf-8'))
+                data = json.loads(raw_data)
+                
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
                 logger.error(f"Failed to parse callback data as JSON: {str(e)}")
-                # If JSON parsing fails, return success to avoid retries
+                logger.error(f"Raw data: {request.data}")
+                # Return success to avoid retries from M-Pesa
                 return jsonify({"ResultCode": 0, "ResultDesc": "Accepted - Invalid JSON format"})
         
         if not data:
@@ -64,14 +80,42 @@ def mpesa_callback():
         return jsonify(response_data)
             
     except Exception as e:
-        logger.error(f"Error processing Mpesa callback: {str(e)}")
+        logger.error(f"Error processing Mpesa callback: {str(e)}", exc_info=True)
         # Return success to avoid retries for parsing errors
         return jsonify({"ResultCode": 0, "ResultDesc": "Error logged - stopping retries"})
 
 @api_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return jsonify({"status": "healthy", "message": "SasaBot API is running"})
+    return jsonify({
+        "status": "healthy", 
+        "message": "SasaBot API is running",
+        "timestamp": datetime.now().isoformat(),
+        "version": "1.0.0"
+    })
+
+@api_bp.route('/test/mpesa-callback', methods=['POST'])
+def test_mpesa_callback():
+    """Test endpoint for M-Pesa callback testing"""
+    try:
+        data = request.get_json()
+        logger.info(f"Test M-Pesa callback received: {data}")
+        
+        # Process the callback using the same logic
+        result = mpesa_service.process_callback(data)
+        
+        return jsonify({
+            "status": "test_processed",
+            "result": result,
+            "timestamp": datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error in test M-Pesa callback: {str(e)}", exc_info=True)
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
 
 @api_bp.route('/webhook/test', methods=['POST'])
 def test_webhook():

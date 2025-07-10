@@ -129,18 +129,27 @@ class MpesaService:
             if not stk_callback and callback_data.get('ResultCode') is not None:
                 stk_callback = callback_data
             
+            # If still no valid callback structure, log and return success to avoid retries
+            if not stk_callback:
+                logger.warning(f"No valid STK callback structure found in: {callback_data}")
+                return {'success': True, 'message': 'No valid callback structure - processed'}
+            
             result_code = stk_callback.get('ResultCode')
             checkout_request_id = stk_callback.get('CheckoutRequestID')
+            merchant_request_id = stk_callback.get('MerchantRequestID')
             
-            logger.info(f"Result code: {result_code}, Checkout request ID: {checkout_request_id}")
+            logger.info(f"Result code: {result_code}, Checkout request ID: {checkout_request_id}, Merchant request ID: {merchant_request_id}")
             
+            # Handle successful payment
             if result_code == 0:
                 # Payment successful
                 callback_metadata = stk_callback.get('CallbackMetadata', {})
                 if isinstance(callback_metadata, dict):
                     items = callback_metadata.get('Item', [])
+                elif isinstance(callback_metadata, list):
+                    items = callback_metadata
                 else:
-                    items = callback_metadata if isinstance(callback_metadata, list) else []
+                    items = []
                 
                 transaction_data = {}
                 for item in items:
@@ -149,6 +158,8 @@ class MpesaService:
                         value = item.get('Value')
                         if name:
                             transaction_data[name] = value
+                
+                logger.info(f"Transaction data extracted: {transaction_data}")
                 
                 # Update order in database
                 self._update_order_payment_status(
@@ -160,18 +171,24 @@ class MpesaService:
                 )
                 
                 return {'success': True, 'message': 'Payment processed successfully'}
-            else:
-                # Payment failed or cancelled
+                
+            # Handle failed or cancelled payment
+            elif result_code is not None:
                 result_desc = stk_callback.get('ResultDesc', 'Payment failed')
-                logger.info(f"Payment failed: {result_desc}")
+                logger.info(f"Payment failed with code {result_code}: {result_desc}")
                 
                 if checkout_request_id:
                     self._update_order_payment_status(checkout_request_id, 'failed')
                 
                 return {'success': True, 'message': f'Payment failed: {result_desc}'}
+            
+            # Handle case where result_code is None
+            else:
+                logger.warning(f"No result code found in callback: {stk_callback}")
+                return {'success': True, 'message': 'Callback processed - no result code'}
                 
         except Exception as e:
-            logger.error(f"Error processing Mpesa callback: {str(e)}")
+            logger.error(f"Error processing Mpesa callback: {str(e)}", exc_info=True)
             return {'success': True, 'message': 'Error processing payment callback - logged for review'}
     
     def _update_order_payment_status(self, checkout_request_id, status, transaction_id=None, amount=None, phone_number=None):

@@ -28,24 +28,34 @@ def process_whatsapp_message(data):
         logger.info(f"Received WhatsApp webhook data: {data}")
         
         # Check if data exists and has required structure
-        if not data or 'entry' not in data:
-            logger.error("Invalid webhook data: Missing 'entry'")
-            return jsonify({"error": "Invalid webhook data"}), 400
+        if not data:
+            logger.warning("Received empty webhook data")
+            return jsonify({"status": "ok"}), 200
+            
+        if 'entry' not in data:
+            logger.warning("Webhook data missing 'entry' - might be a status update")
+            return jsonify({"status": "ok"}), 200
             
         entry = data['entry'][0]
         if 'changes' not in entry:
-            logger.error("Invalid webhook data: Missing 'changes'")
-            return jsonify({"error": "Invalid webhook data"}), 400
+            logger.warning("Webhook data missing 'changes' - might be a status update")
+            return jsonify({"status": "ok"}), 200
             
         changes = entry['changes'][0]
         if 'value' not in changes:
-            logger.error("Invalid webhook data: Missing 'value'")
-            return jsonify({"error": "Invalid webhook data"}), 400
+            logger.warning("Webhook data missing 'value' - might be a status update")
+            return jsonify({"status": "ok"}), 200
             
         value = changes['value']
+        
+        # Handle status updates (delivery receipts, read receipts, etc.)
+        if 'statuses' in value:
+            logger.info("Received status update webhook")
+            return jsonify({"status": "ok"}), 200
+            
         if 'messages' not in value:
-            logger.error("Invalid webhook data: Missing 'messages'")
-            return jsonify({"error": "Invalid webhook data"}), 400
+            logger.info("No messages in webhook data - might be a status update or other notification")
+            return jsonify({"status": "ok"}), 200
             
         messages = value['messages'][0]
         
