@@ -101,6 +101,9 @@ def create_app():
     app.register_blueprint(vendor_bp)
     app.register_blueprint(api_bp)
     
+    # Exempt API routes from CSRF protection
+    csrf.exempt(api_bp)
+    
     # Template context processors
     @app.context_processor
     def inject_user_role():

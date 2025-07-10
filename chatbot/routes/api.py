@@ -1,5 +1,20 @@
-from flask import Blueprint, request, jsonify
-from flask_wtf.csrf import exempt
+from flask i@api_bp.route('/mpesa/callback', methods=['POST'])
+def mpesa_callback():
+    """Handle Mpesa payment callbacks"""
+    try:
+        data = request.get_json()
+        logger.info(f"Received Mpesa callback: {data}")
+        
+        result = mpesa_service.process_callback(data)
+        
+        if result['success']:
+            return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
+        else:
+            return jsonify({"ResultCode": 1, "ResultDesc": "Rejected"})
+            
+    except Exception as e:
+        logger.error(f"Error processing Mpesa callback: {str(e)}")
+        return jsonify({"ResultCode": 1, "ResultDesc": "Error processing callback"})request, jsonify, current_app
 from services.mpesa_service import mpesa_service
 import logging
 from flask_login import login_required, current_user
@@ -12,7 +27,6 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 logger = logging.getLogger(__name__)
 
 @api_bp.route('/mpesa/callback', methods=['POST'])
-@exempt
 def mpesa_callback():
     """Handle Mpesa payment callbacks"""
     try:
@@ -31,13 +45,11 @@ def mpesa_callback():
         return jsonify({"ResultCode": 1, "ResultDesc": "Error processing callback"})
 
 @api_bp.route('/health', methods=['GET'])
-@exempt
 def health_check():
     """Health check endpoint"""
     return jsonify({"status": "healthy", "message": "SasaBot API is running"})
 
 @api_bp.route('/webhook/test', methods=['POST'])
-@exempt
 def test_webhook():
     """Test webhook endpoint for development"""
     data = request.get_json()
