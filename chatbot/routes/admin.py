@@ -162,6 +162,46 @@ def orders():
     
     return render_template('admin/orders.html', orders=orders, status_filter=status_filter)
 
+@admin_bp.route('/orders/<order_id>/details')
+@admin_required
+def order_details(order_id):
+    try:
+        order = Order.objects(id=ObjectId(order_id)).first()
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+        
+        # Render order details template fragment
+        return render_template('admin/order_details_fragment.html', order=order)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/orders/<order_id>/status', methods=['POST'])
+@admin_required
+def update_order_status(order_id):
+    try:
+        data = request.get_json()
+        new_status = data.get('status')
+        
+        if not new_status:
+            return jsonify({'success': False, 'message': 'Status is required'}), 400
+        
+        # Validate status
+        valid_statuses = ['pending', 'confirmed', 'processing', 'completed', 'cancelled']
+        if new_status not in valid_statuses:
+            return jsonify({'success': False, 'message': 'Invalid status'}), 400
+        
+        order = Order.objects(id=ObjectId(order_id)).first()
+        if not order:
+            return jsonify({'success': False, 'message': 'Order not found'}), 404
+        
+        # Update order status
+        order.status = new_status
+        order.save()
+        
+        return jsonify({'success': True, 'message': 'Order status updated successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @admin_bp.route('/chat-sessions')
 @admin_required
 def chat_sessions():
