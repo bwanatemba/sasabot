@@ -145,7 +145,7 @@
                                         <td>
                                             <div class="btn-group btn-group-sm">
                                                 <button type="button" class="btn btn-outline-primary" 
-                                                        onclick="viewOrderDetails({{ order.id }})" title="View Details">
+                                                        onclick="viewOrderDetails('{{ order.id }}')" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
                                                 {% if order.status != 'completed' and order.status != 'cancelled' %}
@@ -156,16 +156,16 @@
                                                     </button>
                                                     <ul class="dropdown-menu">
                                                         {% if order.status == 'pending' %}
-                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'confirmed')">Mark as Confirmed</a></li>
+                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'confirmed')">Mark as Confirmed</a></li>
                                                         {% endif %}
                                                         {% if order.status in ['pending', 'confirmed'] %}
-                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'processing')">Mark as Processing</a></li>
+                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'processing')">Mark as Processing</a></li>
                                                         {% endif %}
                                                         {% if order.status in ['confirmed', 'processing'] %}
-                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus({{ order.id }}, 'completed')">Mark as Completed</a></li>
+                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'completed')">Mark as Completed</a></li>
                                                         {% endif %}
                                                         <li><hr class="dropdown-divider"></li>
-                                                        <li><a class="dropdown-item text-danger" href="#" onclick="updateOrderStatus({{ order.id }}, 'cancelled')">Cancel Order</a></li>
+                                                        <li><a class="dropdown-item text-danger" href="#" onclick="updateOrderStatus('{{ order.id }}', 'cancelled')">Cancel Order</a></li>
                                                     </ul>
                                                 </div>
                                                 {% endif %}
