@@ -18,7 +18,7 @@
                         <i class="fas fa-list me-2"></i>Manage Variations
                     </a>
                     {% endif %}
-                    <a href="{{ url_for('vendor.products', business_id=product.business_id) }}" class="btn btn-outline-secondary">
+                    <a href="{{ url_for('vendor.products', business_id=product.business.id) }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Back to Products
                     </a>
                 </div>
