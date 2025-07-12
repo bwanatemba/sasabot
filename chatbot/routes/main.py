@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, Response, abort
+from flask import Blueprint, render_template, Response, abort, redirect, url_for
 from services.image_service import get_image_from_gridfs
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -44,3 +44,8 @@ def serve_product_image(file_id):
         
     except Exception as e:
         abort(404)
+
+@main_bp.route('/orders/<order_id>/details')
+def order_details_redirect(order_id):
+    """Redirect any root-level order details requests to admin"""
+    return redirect(url_for('admin.order_details', order_id=order_id))

@@ -1012,3 +1012,22 @@ def product_variations(product_id):
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('vendor.businesses'))
+
+@vendor_bp.route('/orders/<order_id>/details')
+@vendor_required
+def order_details(order_id):
+    """Return order details fragment for modal display"""
+    try:
+        order = Order.objects(id=ObjectId(order_id)).first()
+        
+        if not order:
+            return '<p class="text-danger">Order not found</p>', 404
+        
+        # Check if vendor owns this order's business or is admin
+        if get_user_role(current_user) != 'admin' and order.business.vendor != current_user:
+            return '<p class="text-danger">Access denied</p>', 403
+        
+        return render_template('admin/order_details_fragment.html', order=order)
+        
+    except Exception as e:
+        return f'<p class="text-danger">Error loading order details: {str(e)}</p>', 500
