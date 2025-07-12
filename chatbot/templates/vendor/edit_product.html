@@ -60,7 +60,7 @@
                                         <option value="">No Category</option>
                                         {% for category in categories %}
                                             <option value="{{ category.id }}" 
-                                                    {% if product.category_id == category.id %}selected{% endif %}>
+                                                    {% if product.category and product.category.id == category.id %}selected{% endif %}>
                                                 {{ category.name }}
                                             </option>
                                         {% endfor %}
@@ -198,7 +198,7 @@
                                     <div class="card bg-light">
                                         <div class="card-body text-center py-2">
                                             <small class="text-muted">Total Orders</small><br>
-                                            <strong>{{ product.order_items|length }}</strong>
+                                            <strong>{{ product.order_count if product.order_count is defined else 0 }}</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -246,7 +246,7 @@
                         <!-- Action Buttons -->
                         <div class="d-flex justify-content-between">
                             <div>
-                                <a href="{{ url_for('vendor.products', business_id=product.business_id) }}" 
+                                <a href="{{ url_for('vendor.products', business_id=product.business.id) }}" 
                                    class="btn btn-secondary">Cancel</a>
                             </div>
                             <div>

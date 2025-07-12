@@ -171,7 +171,7 @@
                         <div class="row text-center mb-3">
                             <div class="col-6">
                                 <small class="text-muted">Orders</small><br>
-                                <strong>{{ product.order_items|length }}</strong>
+                                <strong>{{ product.order_count if product.order_count is defined else 0 }}</strong>
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">Product ID</small><br>

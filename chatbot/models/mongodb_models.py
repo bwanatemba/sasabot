@@ -93,9 +93,14 @@ class Product(Document):
     is_active = fields.BooleanField(default=True)
     
     created_at = fields.DateTimeField(default=datetime.utcnow)
+    updated_at = fields.DateTimeField(default=datetime.utcnow)
     
     # Embedded variations
     variations = fields.ListField(fields.EmbeddedDocumentField(ProductVariation))
+    
+    def save(self, *args, **kwargs):
+        self.updated_at = datetime.utcnow()
+        return super(Product, self).save(*args, **kwargs)
     
     def get_image_url(self):
         """Get the appropriate image URL for this product."""

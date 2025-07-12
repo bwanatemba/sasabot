@@ -421,6 +421,12 @@ def products(business_id):
         total = products_query.count()
         products_list = products_query.skip(skip).limit(per_page)
         
+        # Calculate order counts for each product
+        for product in products_list:
+            # Count orders containing this product
+            order_count = Order.objects(order_items__product=product).count()
+            product.order_count = order_count
+        
         # Create pagination object
         from services.pagination import Pagination
         products = Pagination(page, per_page, total, products_list)
@@ -540,6 +546,10 @@ def edit_product(product_id):
             
             product.save()
             return redirect(url_for('vendor.products', business_id=str(product.business.id)))
+        
+        # Calculate order count for this product
+        order_count = Order.objects(order_items__product=product).count()
+        product.order_count = order_count
         
         return render_template('vendor/edit_product.html', 
                              business=product.business, 
