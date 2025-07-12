@@ -67,12 +67,12 @@
                             </div>
                             <div class="col-4">
                                 <div class="border-end">
-                                    <h6 class="text-success mb-0">{{ business.orders|length }}</h6>
+                                    <h6 class="text-success mb-0">{{ business|order_count }}</h6>
                                     <small class="text-muted">Orders</small>
                                 </div>
                             </div>
                             <div class="col-4">
-                                <h6 class="text-info mb-0">{{ business.categories|length }}</h6>
+                                <h6 class="text-info mb-0">{{ business|category_count }}</h6>
                                 <small class="text-muted">Categories</small>
                             </div>
                         </div>
