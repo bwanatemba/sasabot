@@ -42,6 +42,18 @@
                     <td><strong>Total Amount:</strong></td>
                     <td><strong>KES {{ "%.2f"|format(order.total_amount) }}</strong></td>
                 </tr>
+                {% if order.mpesa_transaction_id %}
+                <tr>
+                    <td><strong>M-Pesa Transaction:</strong></td>
+                    <td><code>{{ order.mpesa_transaction_id }}</code></td>
+                </tr>
+                {% endif %}
+                {% if order.payment_method %}
+                <tr>
+                    <td><strong>Payment Method:</strong></td>
+                    <td>{{ order.payment_method.title() }}</td>
+                </tr>
+                {% endif %}
             </table>
         </div>
         <div class="col-md-6">
@@ -78,7 +90,7 @@
     <div class="row">
         <div class="col-12">
             <h6 class="text-muted">Order Items</h6>
-            {% if order.items %}
+            {% if order.order_items %}
                 <div class="table-responsive">
                     <table class="table table-sm">
                         <thead class="table-light">
@@ -90,11 +102,14 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for item in order.items %}
+                            {% for item in order.order_items %}
                             <tr>
                                 <td>
                                     <div>
                                         <strong>{{ item.product.name if item.product else 'Unknown Product' }}</strong>
+                                        {% if item.variation_id %}
+                                            <br><small class="text-info">Variation: {{ item.variation_id }}</small>
+                                        {% endif %}
                                         {% if item.product and item.product.description %}
                                             <br><small class="text-muted">{{ item.product.description[:50] }}{% if item.product.description|length > 50 %}...{% endif %}</small>
                                         {% endif %}
@@ -102,7 +117,7 @@
                                 </td>
                                 <td>{{ item.quantity }}</td>
                                 <td>KES {{ "%.2f"|format(item.unit_price) }}</td>
-                                <td><strong>KES {{ "%.2f"|format(item.quantity * item.unit_price) }}</strong></td>
+                                <td><strong>KES {{ "%.2f"|format(item.total_price) }}</strong></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -120,26 +135,12 @@
         </div>
     </div>
 
-    {% if order.notes %}
+    {% if order.customization_notes %}
     <div class="row mt-3">
         <div class="col-12">
-            <h6 class="text-muted">Notes</h6>
+            <h6 class="text-muted">Customization Notes</h6>
             <div class="bg-light p-3 rounded">
-                {{ order.notes }}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if order.delivery_address %}
-    <div class="row mt-3">
-        <div class="col-12">
-            <h6 class="text-muted">Delivery Information</h6>
-            <div class="bg-light p-3 rounded">
-                <strong>Address:</strong> {{ order.delivery_address }}<br>
-                {% if order.delivery_fee %}
-                    <strong>Delivery Fee:</strong> KES {{ "%.2f"|format(order.delivery_fee) }}
-                {% endif %}
+                {{ order.customization_notes }}
             </div>
         </div>
     </div>
