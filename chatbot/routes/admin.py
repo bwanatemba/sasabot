@@ -192,6 +192,19 @@ def update_order_status(order_id):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
+@admin_bp.route('/orders/<order_id>/details')
+@admin_required
+def order_details(order_id):
+    try:
+        order = Order.objects(id=ObjectId(order_id)).first()
+        
+        if not order:
+            return "Order not found", 404
+        
+        return render_template('admin/order_details_fragment.html', order=order)
+    except Exception as e:
+        return f"Error loading order details: {str(e)}", 500
+
 @admin_bp.route('/chat-sessions')
 @admin_required
 def chat_sessions():
