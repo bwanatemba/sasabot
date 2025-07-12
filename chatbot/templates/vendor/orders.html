@@ -76,9 +76,10 @@
                             <select class="form-select" id="status" name="status" onchange="this.form.submit()">
                                 <option value="">All Statuses</option>
                                 <option value="pending" {% if request.args.get('status') == 'pending' %}selected{% endif %}>Pending</option>
-                                <option value="confirmed" {% if request.args.get('status') == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                <option value="paid" {% if request.args.get('status') == 'paid' %}selected{% endif %}>Paid</option>
                                 <option value="processing" {% if request.args.get('status') == 'processing' %}selected{% endif %}>Processing</option>
-                                <option value="delivered" {% if request.args.get('status') == 'delivered' %}selected{% endif %}>Completed</option>
+                                <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="delivered" {% if request.args.get('status') == 'delivered' %}selected{% endif %}>Delivered</option>
                                 <option value="cancelled" {% if request.args.get('status') == 'cancelled' %}selected{% endif %}>Cancelled</option>
                             </select>
                         </div>
@@ -130,8 +131,9 @@
                                     <span class="badge 
                                         {% if order.status == 'delivered' %}bg-success
                                         {% elif order.status == 'pending' %}bg-warning
-                                        {% elif order.status == 'confirmed' %}bg-info
+                                        {% elif order.status == 'paid' %}bg-info
                                         {% elif order.status == 'processing' %}bg-primary
+                                        {% elif order.status == 'completed' %}bg-success
                                         {% elif order.status == 'cancelled' %}bg-danger
                                         {% else %}bg-secondary{% endif %} me-2">
                                         {{ order.status.title() }}
@@ -201,13 +203,13 @@
                                     <div class="d-flex gap-2 flex-wrap">
                                         {% if order.status == 'pending' %}
                                         <button type="button" class="btn btn-sm btn-success" 
-                                                data-order-id="{{ order.id }}" data-status="confirmed"
+                                                data-order-id="{{ order.id }}" data-status="paid"
                                                 onclick="updateOrderStatus(this)">
-                                            <i class="fas fa-check me-1"></i>Confirm Order
+                                            <i class="fas fa-check me-1"></i>Mark as Paid
                                         </button>
                                         {% endif %}
                                         
-                                        {% if order.status in ['pending', 'confirmed'] %}
+                                        {% if order.status in ['pending', 'paid'] %}
                                         <button type="button" class="btn btn-sm btn-primary" 
                                                 data-order-id="{{ order.id }}" data-status="processing"
                                                 onclick="updateOrderStatus(this)">
@@ -215,7 +217,15 @@
                                         </button>
                                         {% endif %}
                                         
-                                        {% if order.status in ['confirmed', 'processing'] %}
+                                        {% if order.status in ['paid', 'processing'] %}
+                                        <button type="button" class="btn btn-sm btn-info" 
+                                                data-order-id="{{ order.id }}" data-status="completed"
+                                                onclick="updateOrderStatus(this)">
+                                            <i class="fas fa-check-circle me-1"></i>Mark as Completed
+                                        </button>
+                                        {% endif %}
+                                        
+                                        {% if order.status == 'completed' %}
                                         <button type="button" class="btn btn-sm btn-success" 
                                                 data-order-id="{{ order.id }}" data-status="delivered"
                                                 onclick="updateOrderStatus(this)">

@@ -8,6 +8,7 @@ from bson import ObjectId
 from mongoengine.errors import DoesNotExist
 import csv
 import io
+import logging
 from datetime import datetime
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -166,30 +167,46 @@ def orders():
 @admin_required
 def update_order_status(order_id):
     try:
-        order = Order.objects(id=ObjectId(order_id)).first()
+        # Validate ObjectId format
+        try:
+            obj_id = ObjectId(order_id)
+        except Exception:
+            return jsonify({'success': False, 'message': 'Invalid order ID format'})
+            
+        order = Order.objects(id=obj_id).first()
         
         if not order:
             return jsonify({'success': False, 'message': 'Order not found'})
         
+        # Validate request content type
+        if not request.is_json:
+            return jsonify({'success': False, 'message': 'Request must be JSON'})
+            
         new_status = request.json.get('status')
-        if new_status in ['pending', 'confirmed', 'processing', 'delivered', 'cancelled']:
-            order.status = new_status
-            order.save()
+        if not new_status:
+            return jsonify({'success': False, 'message': 'Status is required'})
             
-            # Send WhatsApp notification to customer
-            try:
-                from services.messaging_service import send_whatsapp_text_message
-                customer_phone = order.customer.phone_number
-                message = f"Your order {order.order_number} status has been updated to: {new_status.title()}"
-                send_whatsapp_text_message(customer_phone, message)
-            except Exception as e:
-                # Log error but don't fail the status update
-                pass
+        valid_statuses = ['pending', 'paid', 'processing', 'completed', 'delivered', 'cancelled']
+        if new_status not in valid_statuses:
+            return jsonify({'success': False, 'message': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'})
             
-            return jsonify({'success': True, 'message': 'Order status updated successfully'})
+        order.status = new_status
+        order.save()
         
-        return jsonify({'success': False, 'message': 'Invalid status'})
+        # Send WhatsApp notification to customer
+        try:
+            from services.messaging_service import send_whatsapp_text_message
+            customer_phone = order.customer.phone_number
+            message = f"Your order {order.order_number} status has been updated to: {new_status.title()}"
+            send_whatsapp_text_message(customer_phone, message)
+        except Exception as e:
+            # Log error but don't fail the status update
+            logging.getLogger(__name__).warning(f"WhatsApp notification failed: {e}")
+        
+        return jsonify({'success': True, 'message': 'Order status updated successfully'})
+        
     except Exception as e:
+        logging.getLogger(__name__).error(f"Error updating order status: {e}")
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
 @admin_bp.route('/orders/<order_id>/details')

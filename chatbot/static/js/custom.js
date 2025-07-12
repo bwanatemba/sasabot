@@ -608,7 +608,17 @@ function updateOrderStatus(orderIdOrButton, status) {
         },
         body: JSON.stringify({ status: newStatus })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            return response.json();
+        } else {
+            throw new Error("Server returned non-JSON response");
+        }
+    })
     .then(data => {
         if (data.success) {
             showAlert('Order status updated successfully', 'success');
@@ -619,7 +629,7 @@ function updateOrderStatus(orderIdOrButton, status) {
     })
     .catch(error => {
         console.error('Error:', error);
-        showAlert('Error updating order status', 'error');
+        showAlert('Error updating order status: ' + error.message, 'error');
     });
 }
 

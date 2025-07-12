@@ -12,8 +12,9 @@
                     <td>
                         <span class="badge 
                             {% if order.status == 'completed' %}bg-success
+                            {% elif order.status == 'delivered' %}bg-success
                             {% elif order.status == 'pending' %}bg-warning
-                            {% elif order.status == 'confirmed' %}bg-info
+                            {% elif order.status == 'paid' %}bg-info
                             {% elif order.status == 'processing' %}bg-primary
                             {% elif order.status == 'cancelled' %}bg-danger
                             {% else %}bg-secondary{% endif %}">

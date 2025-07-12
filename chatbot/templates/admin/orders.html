@@ -30,9 +30,10 @@
                             <select class="form-select" id="status" name="status" onchange="this.form.submit()">
                                 <option value="">All Statuses</option>
                                 <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
-                                <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
                                 <option value="processing" {% if status_filter == 'processing' %}selected{% endif %}>Processing</option>
-                                <option value="delivered" {% if status_filter == 'delivered' %}selected{% endif %}>Completed</option>
+                                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="delivered" {% if status_filter == 'delivered' %}selected{% endif %}>Delivered</option>
                                 <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
                             </select>
                         </div>
@@ -119,8 +120,9 @@
                                             <span class="badge 
                                                 {% if order.status == 'delivered' %}bg-success
                                                 {% elif order.status == 'pending' %}bg-warning
-                                                {% elif order.status == 'confirmed' %}bg-info
+                                                {% elif order.status == 'paid' %}bg-info
                                                 {% elif order.status == 'processing' %}bg-primary
+                                                {% elif order.status == 'completed' %}bg-success
                                                 {% elif order.status == 'cancelled' %}bg-danger
                                                 {% else %}bg-secondary{% endif %}">
                                                 {{ order.status.title() }}
@@ -156,13 +158,16 @@
                                                     </button>
                                                     <ul class="dropdown-menu">
                                                         {% if order.status == 'pending' %}
-                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'confirmed')">Mark as Confirmed</a></li>
+                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'paid')">Mark as Paid</a></li>
                                                         {% endif %}
-                                                        {% if order.status in ['pending', 'confirmed'] %}
+                                                        {% if order.status in ['pending', 'paid'] %}
                                                             <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'processing')">Mark as Processing</a></li>
                                                         {% endif %}
-                                                        {% if order.status in ['confirmed', 'processing'] %}
-                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'delivered')">Mark as Completed</a></li>
+                                                        {% if order.status in ['paid', 'processing'] %}
+                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'completed')">Mark as Completed</a></li>
+                                                        {% endif %}
+                                                        {% if order.status == 'completed' %}
+                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'delivered')">Mark as Delivered</a></li>
                                                         {% endif %}
                                                         <li><hr class="dropdown-divider"></li>
                                                         <li><a class="dropdown-item text-danger" href="#" onclick="updateOrderStatus('{{ order.id }}', 'cancelled')">Cancel Order</a></li>
