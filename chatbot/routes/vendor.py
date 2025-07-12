@@ -773,7 +773,7 @@ def update_order_status(order_id):
             return jsonify({'success': False, 'message': 'Access denied'})
         
         new_status = request.json.get('status')
-        if new_status in ['pending', 'processing', 'delivered', 'cancelled']:
+        if new_status in ['pending', 'confirmed', 'processing', 'delivered', 'cancelled']:
             order.status = new_status
             order.save()
             

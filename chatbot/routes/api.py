@@ -145,7 +145,7 @@ def sales_data():
             # Query orders for the date range and business IDs
             orders = Order.objects(
                 business__in=business_ids,
-                status='completed',
+                status='delivered',
                 created_at__gte=datetime.combine(start_date, datetime.min.time()),
                 created_at__lte=datetime.combine(end_date, datetime.max.time())
             )
@@ -156,7 +156,7 @@ def sales_data():
             start_date = end_date - timedelta(days=6)
             
             orders = Order.objects(
-                status='completed',
+                status='delivered',
                 created_at__gte=datetime.combine(start_date, datetime.min.time()),
                 created_at__lte=datetime.combine(end_date, datetime.max.time())
             )
@@ -205,7 +205,7 @@ def orders_data():
         
         pending = base_query.filter(status='pending').count()
         processing = base_query.filter(status='processing').count()
-        completed = base_query.filter(status='completed').count()
+        completed = base_query.filter(status='delivered').count()
         cancelled = base_query.filter(status='cancelled').count()
         
         return jsonify({
@@ -273,7 +273,7 @@ def dashboard_stats():
             # Calculate total sales
             completed_orders = Order.objects(
                 business__in=business_ids,
-                status='completed'
+                status='delivered'
             )
             total_sales = sum(order.total_amount for order in completed_orders)
             
@@ -283,7 +283,7 @@ def dashboard_stats():
             
         else:  # admin or default case
             # Calculate total sales
-            completed_orders = Order.objects(status='completed')
+            completed_orders = Order.objects(status='delivered')
             total_sales = sum(order.total_amount for order in completed_orders)
             
             total_orders = Order.objects().count()

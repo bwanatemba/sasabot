@@ -32,7 +32,7 @@
                                 <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
                                 <option value="confirmed" {% if status_filter == 'confirmed' %}selected{% endif %}>Confirmed</option>
                                 <option value="processing" {% if status_filter == 'processing' %}selected{% endif %}>Processing</option>
-                                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="delivered" {% if status_filter == 'delivered' %}selected{% endif %}>Completed</option>
                                 <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
                             </select>
                         </div>
@@ -117,7 +117,7 @@
                                         </td>
                                         <td>
                                             <span class="badge 
-                                                {% if order.status == 'completed' %}bg-success
+                                                {% if order.status == 'delivered' %}bg-success
                                                 {% elif order.status == 'pending' %}bg-warning
                                                 {% elif order.status == 'confirmed' %}bg-info
                                                 {% elif order.status == 'processing' %}bg-primary
@@ -148,7 +148,7 @@
                                                         onclick="viewOrderDetails('{{ order.id }}')" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                {% if order.status != 'completed' and order.status != 'cancelled' %}
+                                                {% if order.status != 'delivered' and order.status != 'cancelled' %}
                                                 <div class="dropdown">
                                                     <button class="btn btn-outline-warning dropdown-toggle" type="button" 
                                                             data-bs-toggle="dropdown" title="Update Status">
@@ -162,7 +162,7 @@
                                                             <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'processing')">Mark as Processing</a></li>
                                                         {% endif %}
                                                         {% if order.status in ['confirmed', 'processing'] %}
-                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'completed')">Mark as Completed</a></li>
+                                                            <li><a class="dropdown-item" href="#" onclick="updateOrderStatus('{{ order.id }}', 'delivered')">Mark as Completed</a></li>
                                                         {% endif %}
                                                         <li><hr class="dropdown-divider"></li>
                                                         <li><a class="dropdown-item text-danger" href="#" onclick="updateOrderStatus('{{ order.id }}', 'cancelled')">Cancel Order</a></li>
