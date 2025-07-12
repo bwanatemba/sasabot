@@ -548,14 +548,65 @@ function deleteProduct(productId) {
 }
 
 // Order Management Functions
-function updateOrderStatus(orderId, status) {
-    fetch(`/vendor/orders/${orderId}/status`, {
+function updateOrderStatus(orderIdOrButton, status) {
+    let orderId, newStatus;
+    
+    // Check if first parameter is a button element (for vendor template)
+    if (typeof orderIdOrButton === 'object' && orderIdOrButton.getAttribute) {
+        orderId = orderIdOrButton.getAttribute('data-order-id');
+        newStatus = orderIdOrButton.getAttribute('data-status');
+        
+        // Debug logging
+        console.log('Button:', orderIdOrButton);
+        console.log('Order ID:', orderId);
+        console.log('New Status:', newStatus);
+        
+        if (!orderId) {
+            alert('Error: Order ID not found');
+            console.error('Missing data-order-id attribute');
+            return;
+        }
+        
+        if (!newStatus) {
+            alert('Error: Status not found');
+            console.error('Missing data-status attribute');
+            return;
+        }
+        
+        if (!confirm(`Are you sure you want to update this order status to "${newStatus}"?`)) {
+            return;
+        }
+    } else {
+        // Called with separate parameters (for admin template)
+        orderId = orderIdOrButton;
+        newStatus = status;
+        
+        if (!confirm(`Are you sure you want to update this order status to "${newStatus}"?`)) {
+            return;
+        }
+    }
+    
+    // Determine the correct endpoint based on current page
+    const isVendorPage = window.location.pathname.includes('/vendor/');
+    const isAdminPage = window.location.pathname.includes('/admin/');
+    
+    let endpoint;
+    if (isVendorPage) {
+        endpoint = `/vendor/orders/${orderId}/update-status`;
+    } else if (isAdminPage) {
+        endpoint = `/admin/orders/${orderId}/status`;
+    } else {
+        // Default fallback
+        endpoint = `/vendor/orders/${orderId}/update-status`;
+    }
+    
+    fetch(endpoint, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': getCSRFToken()
         },
-        body: JSON.stringify({ status: status })
+        body: JSON.stringify({ status: newStatus })
     })
     .then(response => response.json())
     .then(data => {
@@ -563,7 +614,7 @@ function updateOrderStatus(orderId, status) {
             showAlert('Order status updated successfully', 'success');
             location.reload();
         } else {
-            showAlert('Error updating order status', 'error');
+            showAlert('Error updating order status: ' + (data.message || 'Unknown error'), 'error');
         }
     })
     .catch(error => {

@@ -260,39 +260,5 @@ function viewOrderDetails(orderId) {
             alert('Error loading order details');
         });
 }
-
-function updateOrderStatus(orderId, newStatus) {
-    if (confirm(`Are you sure you want to update this order status to "${newStatus}"?`)) {
-        // Get CSRF token from meta tag
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        
-        const headers = {
-            'Content-Type': 'application/json'
-        };
-        
-        // Only add CSRF token if it exists
-        if (csrfToken) {
-            headers['X-CSRFToken'] = csrfToken;
-        }
-        
-        fetch(`/admin/orders/${orderId}/status`, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({ status: newStatus })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error updating order status: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error updating order status');
-        });
-    }
-}
 </script>
 {% endblock %}

@@ -296,51 +296,6 @@
 </div>
 
 <script>
-function updateOrderStatus(button) {
-    const orderId = button.getAttribute('data-order-id');
-    const newStatus = button.getAttribute('data-status');
-    
-    // Debug logging
-    console.log('Button:', button);
-    console.log('Order ID:', orderId);
-    console.log('New Status:', newStatus);
-    
-    if (!orderId) {
-        alert('Error: Order ID not found');
-        console.error('Missing data-order-id attribute');
-        return;
-    }
-    
-    if (!newStatus) {
-        alert('Error: Status not found');
-        console.error('Missing data-status attribute');
-        return;
-    }
-    
-    if (confirm(`Are you sure you want to update this order status to "${newStatus}"?`)) {
-        fetch(`/vendor/orders/${orderId}/update-status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('meta[name=csrf-token]')?.content || ''
-            },
-            body: JSON.stringify({ status: newStatus })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error updating order status: ' + (data.message || 'Unknown error'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error updating order status');
-        });
-    }
-}
-
 function contactCustomer(phoneNumber) {
     if (phoneNumber) {
         const message = encodeURIComponent('Hello! This is regarding your recent order. How can I help you?');
