@@ -7,6 +7,7 @@ from bson import ObjectId
 from werkzeug.utils import secure_filename
 from flask import current_app
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +134,7 @@ def save_image_to_gridfs(file, filename=None):
                 'original_size': len(file_data),
                 'compressed_size': len(resized_data),
                 'image_format': image_format,
-                'uploaded_at': pymongo.collection.datetime.utcnow()
+                'uploaded_at': datetime.utcnow()
             }
         )
         
