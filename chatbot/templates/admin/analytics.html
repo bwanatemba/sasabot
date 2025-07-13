@@ -1,11 +1,8 @@
 {% extends "base.html" %}
 
 {% block title %}System Analytics{% endblock %}
-                                <div class="card-body text-center">
-                                    <h3 class="mb-0">KES {{ "%.2f"|format(analytics.summary.total_revenue|default(0)|float) }}</h3>
-                                    <p class="mb-0">Total Revenue</p>
-                                    <small>+KES {{ "%.2f"|format(analytics.summary.recent_revenue|default(0)|float) }} recent</small>
-                                </div>block content %}
+
+{% block content %}
 <div class="container-fluid py-4">
     <div class="row">
         <div class="col-12">
