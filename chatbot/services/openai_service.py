@@ -219,7 +219,7 @@ def handle_product_inquiry(phone_number, business_id):
                 "text": category.name,
                 "id": f"category_{category.id}"
             })
-        # Add "See all options" button that will show remaining categories
+        # Add "See all options" button that will show remaining categories as a list
         buttons.append({
             "text": "See all options",
             "id": f"see_all_categories_{business_id}"
@@ -288,7 +288,7 @@ def handle_category_selection(phone_number, category_id):
     return send_whatsapp_text_message(phone_number, product_list)
 
 def handle_see_all_categories(phone_number, business_id):
-    """Handle 'See all options' button for categories"""
+    """Handle 'See all options' button for categories - display as list"""
     from models import Business, Category
     
     business = Business.objects(id=business_id).first()
@@ -298,37 +298,27 @@ def handle_see_all_categories(phone_number, business_id):
         from services.messaging_service import send_whatsapp_text_message
         return send_whatsapp_text_message(phone_number, "Sorry, no product categories are available at the moment.")
     
-    # Create buttons for all categories, showing them in batches of 3
-    total_categories = len(categories)
-    buttons = []
-    
-    # Show remaining categories (starting from index 2 since first 2 were already shown)
+    # Create list items for all categories (starting from index 2 since first 2 were already shown)
     remaining_categories = list(categories[2:])
     
-    if len(remaining_categories) <= 3:
-        # If 3 or fewer remaining categories, show all
-        for category in remaining_categories:
-            buttons.append({
-                "text": category.name,
-                "id": f"category_{category.id}"
-            })
-    else:
-        # If more than 3 remaining, show next 2 plus another "See more" button
-        for category in remaining_categories[:2]:
-            buttons.append({
-                "text": category.name,
-                "id": f"category_{category.id}"
-            })
-        buttons.append({
-            "text": "See more options",
-            "id": f"see_more_categories_{business_id}_2"
+    if not remaining_categories:
+        from services.messaging_service import send_whatsapp_text_message
+        return send_whatsapp_text_message(phone_number, "No additional categories available.")
+    
+    # Create list rows for remaining categories
+    list_rows = []
+    for category in remaining_categories:
+        list_rows.append({
+            "id": f"category_{category.id}",
+            "title": category.name,
+            "description": f"Browse {category.name} products"
         })
     
-    from services.messaging_service import send_whatsapp_interactive_message
-    return send_whatsapp_interactive_message(
+    from services.messaging_service import send_whatsapp_list_message
+    return send_whatsapp_list_message(
         phone_number,
-        f"{business.name} - More Categories",
-        "Here are the additional product categories available:",
-        "Select a category to view its products",
-        buttons
+        f"{business.name} - All Categories",
+        "Here are all the available product categories. Select one to view its products:",
+        "Select Category",
+        list_rows
     )
