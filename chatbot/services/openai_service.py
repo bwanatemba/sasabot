@@ -201,38 +201,43 @@ def handle_product_inquiry(phone_number, business_id):
         from services.messaging_service import send_whatsapp_text_message
         return send_whatsapp_text_message(phone_number, "Sorry, no product categories are available at the moment.")
     
-    # Create buttons for categories
-    buttons = []
     total_categories = len(categories)
     
     if total_categories <= 3:
-        # If 3 or fewer categories, show all
+        # If 3 or fewer categories, show as interactive buttons
+        buttons = []
         for category in categories:
             buttons.append({
                 "text": category.name,
                 "id": f"category_{category.id}"
             })
+        
+        from services.messaging_service import send_whatsapp_interactive_message
+        return send_whatsapp_interactive_message(
+            phone_number,
+            f"{business.name} Products/Services",
+            "We offer a wide range of products sorted in different categories. You can select a category below to see the products in each category",
+            "Select a category to view its products",
+            buttons
+        )
     else:
-        # If more than 3 categories, show first 2 plus "See all options"
-        for category in categories[:2]:
-            buttons.append({
-                "text": category.name,
-                "id": f"category_{category.id}"
+        # If more than 3 categories, show as list message
+        list_rows = []
+        for category in categories:
+            list_rows.append({
+                "id": f"category_{category.id}",
+                "title": category.name,
+                "description": f"Browse {category.name} products"
             })
-        # Add "See all options" button that will show remaining categories as a list
-        buttons.append({
-            "text": "See all options",
-            "id": f"see_all_categories_{business_id}"
-        })
-    
-    from services.messaging_service import send_whatsapp_interactive_message
-    return send_whatsapp_interactive_message(
-        phone_number,
-        f"{business.name} Products/Services",
-        "We offer a wide range of products sorted in different categories. You can select a category below to see the products in each category",
-        "Select a category to view its products",
-        buttons
-    )
+        
+        from services.messaging_service import send_whatsapp_list_message
+        return send_whatsapp_list_message(
+            phone_number,
+            f"{business.name} Products/Services",
+            "We offer a wide range of products sorted in different categories. Select a category below to see the products in each category:",
+            "Select Category",
+            list_rows
+        )
 
 def handle_product_details(phone_number, product_id, business_id):
     """Handle product details request"""
