@@ -230,13 +230,20 @@ def handle_product_inquiry(phone_number, business_id):
                 "description": f"Browse {category.name} products"
             })
         
+        # Create sections format for WhatsApp list message
+        sections = [{
+            "title": "Product Categories",
+            "rows": list_rows
+        }]
+        
         from services.messaging_service import send_whatsapp_list_message
         return send_whatsapp_list_message(
             phone_number,
             f"{business.name} Products/Services",
             "We offer a wide range of products sorted in different categories. Select a category below to see the products in each category:",
+            "Select a category to continue",
             "Select Category",
-            list_rows
+            sections
         )
 
 def handle_product_details(phone_number, product_id, business_id):
@@ -319,11 +326,18 @@ def handle_see_all_categories(phone_number, business_id):
             "description": f"Browse {category.name} products"
         })
     
+    # Create sections format for WhatsApp list message
+    sections = [{
+        "title": "Additional Categories",
+        "rows": list_rows
+    }]
+    
     from services.messaging_service import send_whatsapp_list_message
     return send_whatsapp_list_message(
         phone_number,
         f"{business.name} - All Categories",
         "Here are all the available product categories. Select one to view its products:",
+        "Select a category to continue",
         "Select Category",
-        list_rows
+        sections
     )
