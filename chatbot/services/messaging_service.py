@@ -717,7 +717,7 @@ def send_whatsapp_list_message(phone_number, header, body, footer, button_text, 
         raise
 
 def handle_product_variations(phone_number, product_id):
-    """Handle product variations display with interactive buttons"""
+    """Handle product variations display with interactive buttons or list"""
     
     product = Product.objects(id=product_id).first()
     if not product:
@@ -729,26 +729,46 @@ def handle_product_variations(phone_number, product_id):
     if not variations:
         return send_whatsapp_text_message(phone_number, "No variations available for this product.")
     
-    # Create buttons for variations (max 3 at a time)
-    buttons = []
-    for variation in variations[:3]:
-        buttons.append({
-            "text": f"{variation.name} - KES {variation.price:.2f}",
-            "id": f"variation_{variation.variation_id}"
-        })
+    total_variations = len(variations)
     
-    if len(variations) > 3:
-        # Show a "See more" option for additional variations
-        buttons.append({
-            "text": "See more options",
-            "id": f"more_variations_{product_id}"
-        })
-    
-    header = f"{product.name} - Variations"
-    body = f"Choose from available variations of {product.name}:"
-    footer = "Select a variation to purchase"
-    
-    return send_whatsapp_interactive_message(phone_number, header, body, footer, buttons)
+    if total_variations <= 3:
+        # If 3 or fewer variations, show as interactive buttons
+        buttons = []
+        for variation in variations:
+            buttons.append({
+                "text": f"{variation.name} - KES {variation.price:.2f}",
+                "id": f"variation_{variation.variation_id}"
+            })
+        
+        header = f"{product.name} - Variations"
+        body = f"Choose from available variations of {product.name}:"
+        footer = "Select a variation to purchase"
+        
+        return send_whatsapp_interactive_message(phone_number, header, body, footer, buttons)
+    else:
+        # If more than 3 variations, show as list message
+        list_rows = []
+        for variation in variations:
+            list_rows.append({
+                "id": f"variation_{variation.variation_id}",
+                "title": f"{variation.name}",
+                "description": f"KES {variation.price:.2f}"
+            })
+        
+        # Create sections format for WhatsApp list message
+        sections = [{
+            "title": "Product Variations",
+            "rows": list_rows
+        }]
+        
+        return send_whatsapp_list_message(
+            phone_number,
+            f"{product.name} - Variations",
+            f"Choose from available variations of {product.name}:",
+            "Select a variation to continue",
+            "Select Variation",
+            sections
+        )
 
 def handle_product_customization(phone_number, product_id):
     """Handle product customization"""
@@ -1190,7 +1210,7 @@ def cancel_order(phone_number, order_id):
         return send_whatsapp_text_message(phone_number, "Sorry, there was an error processing your request.")
 
 def show_more_variations(phone_number, product_id, page=1):
-    """Show additional product variations"""
+    """Show additional product variations using list format (kept for backward compatibility)"""
     
     try:
         product = Product.objects(id=product_id).first()
@@ -1200,35 +1220,32 @@ def show_more_variations(phone_number, product_id, page=1):
         # Get active variations from the product's embedded variations list
         variations = [var for var in product.variations if var.is_active]
         
-        # Calculate pagination
-        per_page = 3
-        start_idx = (page - 1) * per_page
-        end_idx = start_idx + per_page
-        page_variations = variations[start_idx:end_idx]
+        if not variations:
+            return send_whatsapp_text_message(phone_number, "No variations available.")
         
-        if not page_variations:
-            return send_whatsapp_text_message(phone_number, "No more variations available.")
-        
-        # Create buttons for this page
-        buttons = []
-        for variation in page_variations:
-            buttons.append({
-                "text": f"{variation.name} - KES {variation.price:.2f}",
-                "id": f"variation_{variation.variation_id}"
+        # Create list rows for all variations
+        list_rows = []
+        for variation in variations:
+            list_rows.append({
+                "id": f"variation_{variation.variation_id}",
+                "title": f"{variation.name}",
+                "description": f"KES {variation.price:.2f}"
             })
         
-        # Add navigation buttons if needed
-        if end_idx < len(variations):
-            buttons.append({
-                "text": "More options →",
-                "id": f"more_variations_{product_id}_{page + 1}"
-            })
+        # Create sections format for WhatsApp list message
+        sections = [{
+            "title": "All Variations",
+            "rows": list_rows
+        }]
         
-        header = f"{product.name} - Variations (Page {page})"
-        body = f"Choose from available variations of {product.name}:"
-        footer = "Select a variation to purchase"
-        
-        return send_whatsapp_interactive_message(phone_number, header, body, footer, buttons)
+        return send_whatsapp_list_message(
+            phone_number,
+            f"{product.name} - All Variations",
+            f"Here are all available variations of {product.name}:",
+            "Select a variation to continue",
+            "Select Variation",
+            sections
+        )
         
     except Exception as e:
         logger.error(f"Error showing more variations: {str(e)}")
