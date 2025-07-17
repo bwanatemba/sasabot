@@ -1,6 +1,13 @@
 from mongoengine import Document, EmbeddedDocument, fields
 from flask_login import UserMixin
-from datetime import dclass Customer(Document):
+from datetime import datetime
+import secrets
+import string
+import random
+import gridfs
+from bson import ObjectId
+
+class Customer(Document):
     meta = {'collection': 'customers'}
     
     phone_number = fields.StringField(required=True, unique=True, max_length=20)
@@ -12,7 +19,7 @@ class CustomerState(Document):
     meta = {'collection': 'customer_states'}
     
     phone_number = fields.StringField(required=True, max_length=20)
-    business = fields.ReferenceField(Business, required=True)
+    business = fields.ReferenceField('Business', required=True)
     current_step = fields.StringField(max_length=50)
     awaiting_data = fields.DictField()  # Store pending data collection
     created_at = fields.DateTimeField(default=datetime.utcnow)
@@ -21,11 +28,6 @@ class CustomerState(Document):
     def save(self, *args, **kwargs):
         self.updated_at = datetime.utcnow()
         return super(CustomerState, self).save(*args, **kwargs)
-import secrets
-import string
-import random
-import gridfs
-from bson import ObjectId
 
 class Admin(Document, UserMixin):
     meta = {'collection': 'admins'}
@@ -134,14 +136,6 @@ class Product(Document):
     def has_image(self):
         """Check if product has an image."""
         return bool(self.image_file_id or self.image_url)
-
-class Customer(Document):
-    meta = {'collection': 'customers'}
-    
-    phone_number = fields.StringField(required=True, unique=True, max_length=20)
-    name = fields.StringField(max_length=100)
-    email = fields.EmailField()
-    created_at = fields.DateTimeField(default=datetime.utcnow)
 
 class OrderItem(EmbeddedDocument):
     product = fields.ReferenceField(Product, required=True)
