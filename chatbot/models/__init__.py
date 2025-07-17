@@ -7,8 +7,10 @@ from .mongodb_models import (
     Product, 
     ProductVariation, 
     Customer, 
+    CustomerState,
     Order, 
     OrderItem, 
+    OrderIssue,
     ChatSession, 
     ChatMessage, 
     OnboardingState
@@ -23,8 +25,10 @@ __all__ = [
     'Product', 
     'ProductVariation', 
     'Customer', 
+    'CustomerState',
     'Order', 
     'OrderItem', 
+    'OrderIssue',
     'ChatSession', 
     'ChatMessage', 
     'OnboardingState'

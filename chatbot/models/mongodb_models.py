@@ -1,6 +1,26 @@
 from mongoengine import Document, EmbeddedDocument, fields
 from flask_login import UserMixin
-from datetime import datetime
+from datetime import dclass Customer(Document):
+    meta = {'collection': 'customers'}
+    
+    phone_number = fields.StringField(required=True, unique=True, max_length=20)
+    name = fields.StringField(max_length=100)
+    email = fields.EmailField()
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+
+class CustomerState(Document):
+    meta = {'collection': 'customer_states'}
+    
+    phone_number = fields.StringField(required=True, max_length=20)
+    business = fields.ReferenceField(Business, required=True)
+    current_step = fields.StringField(max_length=50)
+    awaiting_data = fields.DictField()  # Store pending data collection
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    updated_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    def save(self, *args, **kwargs):
+        self.updated_at = datetime.utcnow()
+        return super(CustomerState, self).save(*args, **kwargs)
 import secrets
 import string
 import random
@@ -180,6 +200,21 @@ class ChatSession(Document):
     
     # Embedded messages
     messages = fields.ListField(fields.EmbeddedDocumentField(ChatMessage))
+
+class OrderIssue(Document):
+    meta = {'collection': 'order_issues'}
+    
+    customer = fields.ReferenceField(Customer, required=True)
+    business = fields.ReferenceField(Business, required=True)
+    order = fields.ReferenceField(Order, required=True)
+    issue_description = fields.StringField(required=True)
+    status = fields.StringField(default='open', choices=['open', 'in_progress', 'resolved', 'closed'])
+    created_at = fields.DateTimeField(default=datetime.utcnow)
+    updated_at = fields.DateTimeField(default=datetime.utcnow)
+    
+    def save(self, *args, **kwargs):
+        self.updated_at = datetime.utcnow()
+        return super(OrderIssue, self).save(*args, **kwargs)
 
 class OnboardingState(Document):
     meta = {'collection': 'onboarding_states'}

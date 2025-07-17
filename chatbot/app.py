@@ -252,6 +252,35 @@ def create_app():
             logger.error(f"Error processing WhatsApp webhook: {str(e)}", exc_info=True)
             return jsonify({"status": "ok"}), 200
     
+    # Handle Business-Specific WhatsApp Messages (exempt from CSRF)
+    @app.route('/whatsapp/business/<business_id>/webhook', methods=['GET', 'POST'])
+    @csrf.exempt
+    def handle_business_whatsapp_webhook(business_id):
+        if request.method == 'GET':
+            return messaging_service.verify_webhook()
+        
+        try:
+            # Get the business
+            from models import Business
+            business = Business.objects(id=business_id).first()
+            if not business:
+                logger.error(f"Business not found: {business_id}")
+                return jsonify({"error": "Business not found"}), 404
+            
+            # Get JSON data with error handling
+            data = request.get_json()
+            if data is None:
+                logger.warning(f"Received business WhatsApp webhook with no JSON data for business: {business.name}")
+                return jsonify({"status": "ok"}), 200
+            
+            # Use business-specific messaging service
+            from services.business_messaging_service import process_business_whatsapp_message
+            return process_business_whatsapp_message(data, business)
+            
+        except Exception as e:
+            logger.error(f"Error processing business WhatsApp webhook: {str(e)}", exc_info=True)
+            return jsonify({"status": "ok"}), 200
+    
     return app
 
 app = create_app()

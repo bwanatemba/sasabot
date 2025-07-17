@@ -227,7 +227,10 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Recent Orders</h5>
-                    <a href="{{ url_for('vendor.orders', business_id=business.id) }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    <div>
+                        <a href="{{ url_for('vendor.order_issues', business_id=business.id) }}" class="btn btn-sm btn-outline-warning me-2">Order Issues</a>
+                        <a href="{{ url_for('vendor.orders', business_id=business.id) }}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
                 </div>
                 <div class="card-body">
                     {% if orders %}

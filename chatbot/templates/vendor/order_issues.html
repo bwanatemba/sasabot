@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+
+{% block title %}Order Issues - {{ business.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .issue-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: white;
+    }
+    .issue-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .issue-status {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        font-weight: bold;
+    }
+    .status-open { background-color: #ff6b6b; color: white; }
+    .status-in_progress { background-color: #ffd93d; color: #333; }
+    .status-resolved { background-color: #6bcf7f; color: white; }
+    .status-closed { background-color: #6c757d; color: white; }
+    .issue-description {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+    }
+    .customer-info {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 5px;
+    }
+    .btn-sm {
+        padding: 2px 8px;
+        font-size: 0.8em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Order Issues - {{ business.name }}</h2>
+                <a href="{{ url_for('vendor.businesses') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Businesses
+                </a>
+            </div>
+
+            {% if issues.items %}
+                <div class="row">
+                    <div class="col-12">
+                        <p class="text-muted">Total Issues: {{ issues.total }}</p>
+                        
+                        {% for issue in issues.items %}
+                        <div class="issue-card">
+                            <div class="issue-header">
+                                <div>
+                                    <h5 class="mb-1">
+                                        Order #{{ issue.order.order_number }}
+                                        <span class="issue-status status-{{ issue.status }}">
+                                            {{ issue.status.replace('_', ' ').title() }}
+                                        </span>
+                                    </h5>
+                                    <div class="customer-info">
+                                        <i class="fas fa-user"></i> 
+                                        {{ issue.customer.name or 'Customer' }} 
+                                        ({{ issue.customer.phone_number }})
+                                    </div>
+                                    <div class="customer-info">
+                                        <i class="fas fa-clock"></i> 
+                                        Reported: {{ issue.created_at.strftime('%d %B %Y at %I:%M %p') }}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-primary btn-sm dropdown-toggle" 
+                                                type="button" 
+                                                data-bs-toggle="dropdown">
+                                            Update Status
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item status-update" 
+                                                   href="#" 
+                                                   data-issue-id="{{ issue.id }}" 
+                                                   data-status="open">Open</a></li>
+                                            <li><a class="dropdown-item status-update" 
+                                                   href="#" 
+                                                   data-issue-id="{{ issue.id }}" 
+                                                   data-status="in_progress">In Progress</a></li>
+                                            <li><a class="dropdown-item status-update" 
+                                                   href="#" 
+                                                   data-issue-id="{{ issue.id }}" 
+                                                   data-status="resolved">Resolved</a></li>
+                                            <li><a class="dropdown-item status-update" 
+                                                   href="#" 
+                                                   data-issue-id="{{ issue.id }}" 
+                                                   data-status="closed">Closed</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="issue-description">
+                                <strong>Issue Description:</strong><br>
+                                {{ issue.issue_description }}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">
+                                        <strong>Order Amount:</strong> KSH {{ issue.order.total_amount }}
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">
+                                        <strong>Order Status:</strong> {{ issue.order.status.title() }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Pagination -->
+                        {% if issues.pages > 1 %}
+                        <nav aria-label="Order issues pagination">
+                            <ul class="pagination justify-content-center">
+                                {% if issues.has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('vendor.order_issues', business_id=business.id, page=issues.prev_num) }}">Previous</a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for page_num in issues.iter_pages() %}
+                                    {% if page_num %}
+                                        {% if page_num != issues.page %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('vendor.order_issues', business_id=business.id, page=page_num) }}">{{ page_num }}</a>
+                                            </li>
+                                        {% else %}
+                                            <li class="page-item active">
+                                                <span class="page-link">{{ page_num }}</span>
+                                            </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled">
+                                            <span class="page-link">...</span>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if issues.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('vendor.order_issues', business_id=business.id, page=issues.next_num) }}">Next</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="row">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <h4>No Order Issues</h4>
+                            <p>There are currently no reported issues for orders in this business.</p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Updating status...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Handle status update
+    $('.status-update').click(function(e) {
+        e.preventDefault();
+        
+        const issueId = $(this).data('issue-id');
+        const newStatus = $(this).data('status');
+        
+        // Show loading modal
+        $('#loadingModal').modal('show');
+        
+        // Make AJAX request
+        $.ajax({
+            url: `{{ url_for('vendor.update_issue_status', issue_id='ISSUE_ID') }}`.replace('ISSUE_ID', issueId),
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                status: newStatus
+            }),
+            success: function(response) {
+                $('#loadingModal').modal('hide');
+                if (response.success) {
+                    // Show success message
+                    const alert = `
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            ${response.message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `;
+                    $('.container').prepend(alert);
+                    
+                    // Reload page to show updated status
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    // Show error message
+                    const alert = `
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            ${response.message}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    `;
+                    $('.container').prepend(alert);
+                }
+            },
+            error: function(xhr, status, error) {
+                $('#loadingModal').modal('hide');
+                const alert = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        Error updating status: ${error}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                $('.container').prepend(alert);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

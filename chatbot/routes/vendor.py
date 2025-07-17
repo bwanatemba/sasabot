@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_required, current_user
-from models import Business, Product, Category, Order, Customer, ChatSession, ChatMessage, ProductVariation, OrderItem, Vendor
+from models import Business, Product, Category, Order, Customer, ChatSession, ChatMessage, ProductVariation, OrderItem, OrderIssue, Vendor
 from services.auth.decorators import vendor_required
 from services.auth.auth_manager import get_user_role
 from services.image_service import update_product_image, get_image_url, delete_image_from_gridfs
@@ -818,6 +818,91 @@ def update_order_status(order_id):
         
     except Exception as e:
         logging.getLogger(__name__).error(f"Error updating order status: {e}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+
+@vendor_bp.route('/order-issues/<business_id>')
+@vendor_required
+def order_issues(business_id):
+    """Display order issues for a specific business"""
+    try:
+        business = Business.objects(id=ObjectId(business_id)).first()
+        
+        if not business:
+            flash('Business not found.', 'error')
+            return redirect(url_for('vendor.businesses'))
+        
+        # Check if vendor owns this business or is admin
+        if get_user_role(current_user) != 'admin' and business.vendor != current_user:
+            flash('Access denied.', 'error')
+            return redirect(url_for('vendor.businesses'))
+        
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        skip = (page - 1) * per_page
+        
+        # Get order issues for this business
+        issues_query = OrderIssue.objects(business=business)
+        total = issues_query.count()
+        issues_list = issues_query.order_by('-created_at').skip(skip).limit(per_page)
+        
+        # Create pagination object
+        from services.pagination import Pagination
+        issues = Pagination(page, per_page, total, issues_list)
+        
+        return render_template('vendor/order_issues.html', 
+                             business=business, 
+                             issues=issues,
+                             active_page='order_issues')
+        
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Error loading order issues: {e}")
+        flash(f'Error loading order issues: {str(e)}', 'error')
+        return redirect(url_for('vendor.businesses'))
+
+@vendor_bp.route('/order-issues/<issue_id>/update-status', methods=['POST'])
+@vendor_required
+def update_issue_status(issue_id):
+    """Update the status of an order issue"""
+    try:
+        issue = OrderIssue.objects(id=ObjectId(issue_id)).first()
+        
+        if not issue:
+            return jsonify({'success': False, 'message': 'Issue not found'})
+        
+        # Check if vendor owns this issue's business or is admin
+        if get_user_role(current_user) != 'admin' and issue.business.vendor != current_user:
+            return jsonify({'success': False, 'message': 'Access denied'})
+        
+        if not request.is_json:
+            return jsonify({'success': False, 'message': 'Request must be JSON'})
+            
+        new_status = request.json.get('status')
+        if not new_status:
+            return jsonify({'success': False, 'message': 'Status is required'})
+            
+        valid_statuses = ['open', 'in_progress', 'resolved', 'closed']
+        if new_status not in valid_statuses:
+            return jsonify({'success': False, 'message': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'})
+            
+        issue.status = new_status
+        issue.save()
+        
+        # Send WhatsApp notification to customer
+        from services.business_messaging_service import send_business_whatsapp_text_message
+        customer_phone = issue.customer.phone_number
+        message = f"Update on your issue with order {issue.order.order_number}: Status changed to {new_status.replace('_', ' ').title()}. Thank you for your patience!"
+        
+        try:
+            send_business_whatsapp_text_message(customer_phone, message, issue.business)
+        except Exception as e:
+            # Log error but don't fail the status update
+            logging.getLogger(__name__).warning(f"WhatsApp notification failed: {e}")
+        
+        return jsonify({'success': True, 'message': 'Issue status updated successfully'})
+        
+    except Exception as e:
+        logging.getLogger(__name__).error(f"Error updating issue status: {e}")
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
 @vendor_bp.route('/chat-sessions/<business_id>')
