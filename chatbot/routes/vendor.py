@@ -341,7 +341,9 @@ def whatsapp_config(business_id):
             flash('WhatsApp configuration updated successfully!', 'success')
             return redirect(url_for('vendor.business_detail', business_id=business_id))
         
-        return render_template('vendor/whatsapp_config.html', business=business)
+        return render_template('vendor/whatsapp_config.html', 
+                              business=business, 
+                              verify_token=f"sasabot_business_verify_{business.id}")
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('vendor.businesses'))

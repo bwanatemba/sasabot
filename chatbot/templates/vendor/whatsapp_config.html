@@ -95,7 +95,7 @@
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-link"></i></span>
                                 <input type="text" class="form-control" id="webhook_url" 
-                                       value="{{ url_for('handle_whatsapp_webhook', _external=True) }}" readonly>
+                                       value="{{ url_for('handle_business_whatsapp_webhook', business_id=business.id, _external=True) }}" readonly>
                                 <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('webhook_url')">
                                     <i class="fas fa-copy"></i>
                                 </button>
@@ -110,13 +110,14 @@
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-shield-alt"></i></span>
                                 <input type="text" class="form-control" id="verify_token" 
-                                       value="sasabot_webhook_verify_{{ business.id }}" readonly>
+                                       value="{{ verify_token }}" readonly>
                                 <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('verify_token')">
                                     <i class="fas fa-copy"></i>
                                 </button>
                             </div>
                             <div class="form-text">
-                                Use this token to verify your webhook with WhatsApp
+                                <i class="fas fa-info-circle me-1"></i>
+                                This is your business-specific verify token. Use this unique token for your WhatsApp Business API webhook configuration.
                             </div>
                         </div>
                         

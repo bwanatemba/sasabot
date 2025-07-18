@@ -257,7 +257,7 @@ def create_app():
     @csrf.exempt
     def handle_business_whatsapp_webhook(business_id):
         if request.method == 'GET':
-            return messaging_service.verify_webhook()
+            return messaging_service.verify_business_webhook(business_id)
         
         try:
             # Get the business

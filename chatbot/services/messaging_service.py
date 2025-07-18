@@ -23,6 +23,20 @@ def verify_webhook():
             return challenge
         return jsonify({"error": "Invalid verification token"}), 403
 
+def verify_business_webhook(business_id):
+    """Handle webhook verification for business-specific webhooks"""
+    mode = request.args.get('hub.mode')
+    token = request.args.get('hub.verify_token')
+    challenge = request.args.get('hub.challenge')
+    
+    # Generate business-specific verify token
+    expected_token = f"sasabot_business_verify_{business_id}"
+    
+    if mode and token:
+        if mode == 'subscribe' and token == expected_token:
+            return challenge
+        return jsonify({"error": "Invalid verification token"}), 403
+
 def process_whatsapp_message(data):
     try:
         logger.info(f"Received WhatsApp webhook data: {data}")
