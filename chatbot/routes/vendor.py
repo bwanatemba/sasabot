@@ -1144,3 +1144,172 @@ def order_details(order_id):
         
     except Exception as e:
         return f'<p class="text-danger">Error loading order details: {str(e)}</p>', 500
+
+@vendor_bp.route('/chat-ui/<business_id>')
+@vendor_required
+def chat_ui(business_id):
+    """Display the chat UI interface for a specific business"""
+    try:
+        business = Business.objects(id=ObjectId(business_id)).first()
+        
+        if not business:
+            flash('Business not found.', 'error')
+            return redirect(url_for('vendor.businesses'))
+        
+        # Check if vendor owns this business or is admin
+        if get_user_role(current_user) != 'admin' and business.vendor != current_user:
+            flash('Access denied.', 'error')
+            return redirect(url_for('vendor.businesses'))
+        
+        # Get active chat sessions for this business
+        chat_sessions = ChatSession.objects(business=business).order_by('-created_at').limit(50)
+        
+        return render_template('vendor/chat_ui.html',
+                             business=business,
+                             chat_sessions=chat_sessions)
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('vendor.businesses'))
+
+@vendor_bp.route('/chat-ui')
+@vendor_required
+def chat_ui_all():
+    """Display the chat UI interface for all businesses (admin only)"""
+    try:
+        if get_user_role(current_user) != 'admin':
+            # For regular vendors, redirect to first business chat
+            businesses = Business.objects(vendor=current_user)
+            if businesses:
+                return redirect(url_for('vendor.chat_ui', business_id=str(businesses.first().id)))
+            else:
+                flash('No businesses found.', 'error')
+                return redirect(url_for('vendor.businesses'))
+        
+        # Admin can see all chat sessions
+        chat_sessions = ChatSession.objects().order_by('-created_at').limit(100)
+        
+        return render_template('vendor/chat_ui.html',
+                             business=None,
+                             chat_sessions=chat_sessions)
+    except Exception as e:
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('vendor.dashboard'))
+
+@vendor_bp.route('/chat-ui/session/<session_id>/messages')
+@vendor_required
+def get_chat_messages(session_id):
+    """Get messages for a specific chat session"""
+    try:
+        session = ChatSession.objects(id=ObjectId(session_id)).first()
+        
+        if not session:
+            return jsonify({'success': False, 'error': 'Chat session not found'})
+        
+        # Check if vendor has access to this session
+        if get_user_role(current_user) != 'admin' and session.business.vendor != current_user:
+            return jsonify({'success': False, 'error': 'Access denied'})
+        
+        # Check if this is a polling request for new messages
+        poll = request.args.get('poll', False)
+        last_message_time = request.args.get('last_message_time')
+        
+        messages = []
+        new_messages = []
+        
+        if session.messages:
+            for message in session.messages:
+                message_data = {
+                    'message_text': message.message_text,
+                    'sender_type': message.sender_type,
+                    'timestamp': message.timestamp.isoformat() if message.timestamp else None,
+                    'message_type': message.message_type
+                }
+                messages.append(message_data)
+                
+                # If polling, check for messages newer than last_message_time
+                if poll and last_message_time and message.timestamp:
+                    if message.timestamp.isoformat() > last_message_time:
+                        new_messages.append(message_data)
+        
+        # Get customer information
+        customer_data = {
+            'name': session.customer.name if session.customer else 'Customer',
+            'phone_number': session.customer.phone_number if session.customer else '',
+            'email': session.customer.email if session.customer else ''
+        }
+        
+        response_data = {
+            'success': True,
+            'messages': messages,
+            'customer': customer_data
+        }
+        
+        if poll:
+            response_data['new_messages'] = new_messages
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error getting chat messages: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@vendor_bp.route('/chat-ui/session/<session_id>/send-message', methods=['POST'])
+@vendor_required
+def send_chat_message(session_id):
+    """Send a message to a customer in a chat session"""
+    try:
+        session = ChatSession.objects(id=ObjectId(session_id)).first()
+        
+        if not session:
+            return jsonify({'success': False, 'error': 'Chat session not found'})
+        
+        # Check if vendor has access to this session
+        if get_user_role(current_user) != 'admin' and session.business.vendor != current_user:
+            return jsonify({'success': False, 'error': 'Access denied'})
+        
+        data = request.get_json()
+        message_text = data.get('message', '').strip()
+        
+        if not message_text:
+            return jsonify({'success': False, 'error': 'Message text is required'})
+        
+        # Create the message object
+        message = ChatMessage(
+            sender_type='vendor',
+            message_text=message_text,
+            message_type='text',
+            timestamp=datetime.utcnow()
+        )
+        
+        # Add message to session
+        session.messages.append(message)
+        session.save()
+        
+        # Send the message via WhatsApp
+        from services.business_messaging_service import send_business_whatsapp_text_message
+        
+        if session.customer and session.customer.phone_number:
+            result = send_business_whatsapp_text_message(
+                session.customer.phone_number,
+                message_text,
+                session.business
+            )
+            
+            if 'error' in result:
+                logger.warning(f"Failed to send WhatsApp message: {result['error']}")
+                # Still save the message in database even if WhatsApp fails
+        
+        return jsonify({
+            'success': True,
+            'message': 'Message sent successfully',
+            'message_data': {
+                'message_text': message_text,
+                'sender_type': 'vendor',
+                'timestamp': message.timestamp.isoformat(),
+                'message_type': 'text'
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error sending chat message: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})

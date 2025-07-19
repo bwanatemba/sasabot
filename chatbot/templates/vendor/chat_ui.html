@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+
+{% block title %}Chat Interface - {{ business.name if business else 'All Businesses' }} - SasaBot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 text-primary fw-bold">
+                        <i class="fas fa-comments me-2"></i>Chat Interface
+                        {% if business %} - {{ business.name }}{% endif %}
+                    </h1>
+                    <p class="text-muted">Communicate directly with your customers</p>
+                </div>
+                <div>
+                    {% if business %}
+                    <a href="{{ url_for('vendor.business_detail', business_id=business.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Business
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('vendor.dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Chat Sessions List -->
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>Active Chats
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" onclick="refreshChatList()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div id="chatSessionsList" class="chat-sessions-list" style="max-height: 600px; overflow-y: auto;">
+                        {% if chat_sessions %}
+                            {% for session in chat_sessions %}
+                            <div class="chat-session-item border-bottom p-3 cursor-pointer {% if loop.first %}active{% endif %}" 
+                                 data-session-id="{{ session.id }}" 
+                                 onclick="loadChatSession('{{ session.id }}')">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                        {{ session.customer.name[0].upper() if session.customer.name else 'C' }}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ session.customer.name or 'Customer' }}</h6>
+                                        <p class="mb-1 text-muted small">{{ session.customer.phone_number }}</p>
+                                        {% if session.messages %}
+                                            {% set last_message = session.messages|sort(attribute='timestamp')|last %}
+                                            <p class="mb-0 text-truncate small text-muted">
+                                                {{ last_message.message_text[:30] }}{% if last_message.message_text|length > 30 %}...{% endif %}
+                                            </p>
+                                            <small class="text-muted">
+                                                {{ last_message.timestamp.strftime('%H:%M') if last_message.timestamp else 'N/A' }}
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                    {% if session.unread_count %}
+                                    <span class="badge bg-primary rounded-pill">{{ session.unread_count }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                                <h6 class="text-muted">No active chats</h6>
+                                <p class="text-muted small">Customer chats will appear here</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Interface -->
+        <div class="col-md-8">
+            <div class="card h-100">
+                <!-- Chat Header -->
+                <div class="card-header" id="chatHeader" style="display: none;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar-sm bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                <span id="customerInitial">C</span>
+                            </div>
+                            <div>
+                                <h6 class="mb-0" id="customerName">Customer</h6>
+                                <small class="text-muted" id="customerPhone"></small>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="badge bg-success" id="customerStatus">Online</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Messages -->
+                <div class="card-body" id="chatMessages" style="min-height: 500px; max-height: 500px; overflow-y: auto; background-color: #f8f9fa;">
+                    <div class="text-center py-5" id="noChatSelected">
+                        <i class="fas fa-comment-alt fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">Select a chat to start messaging</h5>
+                        <p class="text-muted">Choose a customer from the list to view and respond to their messages</p>
+                    </div>
+                </div>
+
+                <!-- Message Input -->
+                <div class="card-footer" id="messageInput" style="display: none;">
+                    <form id="messageForm" onsubmit="sendMessage(event)">
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="messageText" 
+                                   placeholder="Type your message..."
+                                   required>
+                            <button class="btn btn-primary" type="submit" id="sendButton">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="insertQuickReply('Thank you for contacting us!')">
+                            Quick Reply 1
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="insertQuickReply('How can I help you today?')">
+                            Quick Reply 2
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertQuickReply('We will get back to you shortly.')">
+                            Quick Reply 3
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.chat-session-item {
+    transition: background-color 0.2s;
+}
+
+.chat-session-item:hover {
+    background-color: #f8f9fa;
+}
+
+.chat-session-item.active {
+    background-color: #e3f2fd;
+    border-left: 4px solid #2196f3;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.avatar-sm {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+}
+
+.chat-message {
+    margin-bottom: 15px;
+}
+
+.message-bubble {
+    max-width: 70%;
+    padding: 10px 15px;
+    border-radius: 15px;
+    position: relative;
+}
+
+.message-bubble.sent {
+    background-color: #007bff;
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 5px;
+}
+
+.message-bubble.received {
+    background-color: #e9ecef;
+    color: #333;
+    margin-right: auto;
+    border-bottom-left-radius: 5px;
+}
+
+.message-bubble.ai {
+    background-color: #28a745;
+    color: white;
+    margin-right: auto;
+    border-bottom-left-radius: 5px;
+}
+
+.message-time {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-top: 5px;
+}
+
+.chat-sessions-list::-webkit-scrollbar,
+#chatMessages::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-sessions-list::-webkit-scrollbar-track,
+#chatMessages::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.chat-sessions-list::-webkit-scrollbar-thumb,
+#chatMessages::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.chat-sessions-list::-webkit-scrollbar-thumb:hover,
+#chatMessages::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+</style>
+
+<script>
+let currentSessionId = null;
+let pollingInterval = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Load first chat session if available
+    const firstSession = document.querySelector('.chat-session-item');
+    if (firstSession) {
+        const sessionId = firstSession.dataset.sessionId;
+        loadChatSession(sessionId);
+    }
+    
+    // Start polling for new messages
+    startMessagePolling();
+});
+
+function loadChatSession(sessionId) {
+    currentSessionId = sessionId;
+    
+    // Update active session in the list
+    document.querySelectorAll('.chat-session-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`[data-session-id="${sessionId}"]`).classList.add('active');
+    
+    // Show loading state
+    document.getElementById('noChatSelected').style.display = 'none';
+    document.getElementById('chatMessages').innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Loading messages...</div>';
+    
+    // Load chat messages
+    fetch(`/vendor/chat-ui/session/${sessionId}/messages`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayChatMessages(data.messages);
+                updateChatHeader(data.customer);
+                showChatInterface();
+            } else {
+                showError('Failed to load chat messages');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading chat session:', error);
+            showError('Error loading chat messages');
+        });
+}
+
+function displayChatMessages(messages) {
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.innerHTML = '';
+    
+    if (!messages || messages.length === 0) {
+        chatMessages.innerHTML = '<div class="text-center py-3 text-muted">No messages yet</div>';
+        return;
+    }
+    
+    messages.forEach(message => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message';
+        
+        let messageClass = 'received';
+        let senderLabel = 'Customer';
+        
+        if (message.sender_type === 'vendor') {
+            messageClass = 'sent';
+            senderLabel = 'You';
+        } else if (message.sender_type === 'gpt') {
+            messageClass = 'ai';
+            senderLabel = 'AI Assistant';
+        }
+        
+        messageDiv.innerHTML = `
+            <div class="d-flex ${messageClass === 'sent' ? 'justify-content-end' : 'justify-content-start'}">
+                <div class="message-bubble ${messageClass}">
+                    <div class="message-content">${escapeHtml(message.message_text)}</div>
+                    <div class="message-time">
+                        ${senderLabel} • ${formatMessageTime(message.timestamp)}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+    });
+    
+    // Scroll to bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function updateChatHeader(customer) {
+    if (customer) {
+        document.getElementById('customerInitial').textContent = customer.name ? customer.name[0].toUpperCase() : 'C';
+        document.getElementById('customerName').textContent = customer.name || 'Customer';
+        document.getElementById('customerPhone').textContent = customer.phone_number || '';
+    }
+}
+
+function showChatInterface() {
+    document.getElementById('chatHeader').style.display = 'block';
+    document.getElementById('messageInput').style.display = 'block';
+    document.getElementById('noChatSelected').style.display = 'none';
+}
+
+function sendMessage(event) {
+    event.preventDefault();
+    
+    if (!currentSessionId) {
+        showError('Please select a chat session first');
+        return;
+    }
+    
+    const messageText = document.getElementById('messageText').value.trim();
+    if (!messageText) return;
+    
+    const sendButton = document.getElementById('sendButton');
+    const originalContent = sendButton.innerHTML;
+    
+    // Show loading state
+    sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    sendButton.disabled = true;
+    
+    // Send message
+    fetch(`/vendor/chat-ui/session/${currentSessionId}/send-message`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            message: messageText
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Clear input
+            document.getElementById('messageText').value = '';
+            
+            // Add message to chat immediately
+            addMessageToChat(messageText, 'vendor', new Date());
+            
+            // Show success feedback
+            showSuccess('Message sent successfully');
+        } else {
+            showError(data.error || 'Failed to send message');
+        }
+    })
+    .catch(error => {
+        console.error('Error sending message:', error);
+        showError('Error sending message');
+    })
+    .finally(() => {
+        // Restore button state
+        sendButton.innerHTML = originalContent;
+        sendButton.disabled = false;
+    });
+}
+
+function addMessageToChat(messageText, senderType, timestamp) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'chat-message';
+    
+    let messageClass = 'received';
+    let senderLabel = 'Customer';
+    
+    if (senderType === 'vendor') {
+        messageClass = 'sent';
+        senderLabel = 'You';
+    } else if (senderType === 'gpt') {
+        messageClass = 'ai';
+        senderLabel = 'AI Assistant';
+    }
+    
+    messageDiv.innerHTML = `
+        <div class="d-flex ${messageClass === 'sent' ? 'justify-content-end' : 'justify-content-start'}">
+            <div class="message-bubble ${messageClass}">
+                <div class="message-content">${escapeHtml(messageText)}</div>
+                <div class="message-time">
+                    ${senderLabel} • ${formatMessageTime(timestamp)}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function insertQuickReply(text) {
+    document.getElementById('messageText').value = text;
+    document.getElementById('messageText').focus();
+}
+
+function refreshChatList() {
+    // Reload the page to refresh chat list
+    window.location.reload();
+}
+
+function startMessagePolling() {
+    // Poll for new messages every 5 seconds
+    pollingInterval = setInterval(() => {
+        if (currentSessionId) {
+            checkForNewMessages();
+        }
+    }, 5000);
+}
+
+function checkForNewMessages() {
+    if (!currentSessionId) return;
+    
+    fetch(`/vendor/chat-ui/session/${currentSessionId}/messages?poll=true`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.new_messages) {
+                // Add new messages to chat
+                data.new_messages.forEach(message => {
+                    addMessageToChat(message.message_text, message.sender_type, message.timestamp);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error polling for messages:', error);
+        });
+}
+
+function formatMessageTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+function showSuccess(message) {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-success position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>${message}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+function showError(message) {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = 'alert alert-danger position-fixed';
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        <i class="fas fa-exclamation-circle me-2"></i>${message}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
+// Clean up interval on page unload
+window.addEventListener('beforeunload', function() {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+    }
+});
+</script>
+{% endblock %}

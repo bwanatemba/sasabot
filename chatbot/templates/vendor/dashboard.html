@@ -29,6 +29,9 @@
                         <a class="nav-link text-white" href="{{ url_for('vendor.bulk_messaging') }}">
                             <i class="fas fa-bullhorn me-2"></i>Bulk Messaging
                         </a>
+                        <a class="nav-link text-white" href="{{ url_for('vendor.chat_ui_all') }}">
+                            <i class="fas fa-comment-dots me-2"></i>Chat Interface
+                        </a>
                         
                         <!-- Business-specific links -->
                         {% for business in businesses %}
@@ -51,6 +54,9 @@
                             </a>
                             <a class="nav-link text-white ps-3" href="{{ url_for('vendor.chat_sessions', business_id=business.id) }}">
                                 <i class="fas fa-comments me-2"></i>Chat Sessions
+                            </a>
+                            <a class="nav-link text-white ps-3" href="{{ url_for('vendor.chat_ui', business_id=business.id) }}">
+                                <i class="fas fa-comment-dots me-2"></i>Chat Interface
                             </a>
                             <a class="nav-link text-white ps-3" href="{{ url_for('vendor.business_analytics', business_id=business.id) }}">
                                 <i class="fas fa-chart-bar me-2"></i>Analytics
