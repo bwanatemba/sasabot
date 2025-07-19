@@ -398,9 +398,16 @@ def process_whatsapp_message(data):
                     'phone_number': phone_number,
                     'button_id': system_button_id
                 })
+            # Handle non-trigger text messages with GPT for general platform inquiries
+            elif message_text and 'text' in messages:
+                logger.info(f"Non-trigger text message from {phone_number}, sending to GPT: {message_text}")
+                return handle_system_message({
+                    'phone_number': phone_number,
+                    'message': messages.get('text', {}).get('body', '')
+                })
             else:
-                # Ignore all other messages - they should be handled by business-specific webhooks
-                logger.info(f"Ignoring non-system message from {phone_number} - should be handled by business webhook")
+                # Ignore other types of messages (like media) - they should be handled by business-specific webhooks
+                logger.info(f"Ignoring non-text message from {phone_number} - should be handled by business webhook")
                 return jsonify({"status": "ok"}), 200
         
         # Handle onboarding interactions for users already in onboarding process
