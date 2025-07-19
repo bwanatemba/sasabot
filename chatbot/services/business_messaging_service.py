@@ -316,12 +316,16 @@ def handle_business_user_message(data):
             # Check for greeting/trigger words
             if is_business_greeting(message):
                 return send_business_greeting(phone_number, business, customer)
-        else:
+            
+            # Default response for unrecognized messages
             return send_business_whatsapp_text_message(
                 phone_number,
                 f"Thank you for your message. How can {business.name} assist you today? Please use our menu options for better service.",
                 business
-            )        return jsonify({"error": "No message or button data provided"}), 400
+            )
+        
+        # If neither message nor button_id provided
+        return jsonify({"error": "No message or button data provided"}), 400
         
     except Exception as e:
         logger.error(f"Error handling business user message: {str(e)}")
