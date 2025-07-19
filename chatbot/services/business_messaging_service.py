@@ -334,21 +334,34 @@ def handle_business_user_message(data):
 def send_business_greeting(phone_number, business, customer):
     """Send the business-specific greeting message"""
     try:
-        buttons = [
-            {"text": "Browse Categories", "id": "browse_categories"},
-            {"text": "View My Orders", "id": "view_orders"},
-            {"text": "Issue with Order", "id": "order_issue"},
-            {"text": "Update Your Details", "id": "update_details"}
-        ]
-        
         body_text = f"Hello! Welcome to {business.name}. How can I assist you today? If you have any questions or need information, feel free to ask. Just type it and our AI assistant will be able to assist you. We are also on hand to help you."
         
-        response = send_business_whatsapp_interactive_message(
+        # Define menu options
+        menu_options = [
+            {"text": "Browse Categories", "id": "browse_categories", "description": "View our product categories"},
+            {"text": "View My Orders", "id": "view_orders", "description": "Check your order history and status"},
+            {"text": "Issue with Order", "id": "order_issue", "description": "Report a problem with your order"},
+            {"text": "Update Your Details", "id": "update_details", "description": "Update your contact information"}
+        ]
+        
+        # Since we have 4 options, use list message instead of buttons
+        rows = []
+        for option in menu_options:
+            rows.append({
+                "id": option["id"],
+                "title": option["text"][:24],  # WhatsApp title limit
+                "description": option["description"][:72]  # WhatsApp description limit
+            })
+        
+        sections = [{"title": "How can we help?", "rows": rows}]
+        
+        response = send_business_whatsapp_list_message(
             phone_number,
             "Hello Customer",
             body_text,
             "Please choose an option",
-            buttons,
+            "Select Option",
+            sections,
             business
         )
         
