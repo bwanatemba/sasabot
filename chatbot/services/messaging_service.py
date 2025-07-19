@@ -1,6 +1,7 @@
 import requests
 import os
 import logging
+import uuid
 from datetime import datetime
 from flask import jsonify, request
 from dotenv import load_dotenv
@@ -377,10 +378,26 @@ def process_whatsapp_message(data):
             if 'text' in messages:
                 message_text = messages.get('text', {}).get('body', '').lower().strip()
             
-            # Only respond to initial trigger words for system onboarding
+            # Check for system button responses (welcome message buttons)
+            system_button_id = ""
+            if 'interactive' in messages:
+                interactive = messages.get('interactive', {})
+                if 'button_reply' in interactive:
+                    system_button_id = interactive['button_reply'].get('id', '')
+                elif 'list_reply' in interactive:
+                    system_button_id = interactive['list_reply'].get('id', '')
+            
+            # Handle initial trigger words for system onboarding
             if message_text in ["hi", "hello", "sasabot", "start"]:
                 logger.info(f"System trigger word detected from {phone_number}: {message_text}")
                 return handle_system_onboarding_trigger(phone_number)
+            # Handle system welcome message button responses
+            elif system_button_id in ["about", "faqs", "onboarding"]:
+                logger.info(f"System button response detected from {phone_number}: {system_button_id}")
+                return handle_system_message({
+                    'phone_number': phone_number,
+                    'button_id': system_button_id
+                })
             else:
                 # Ignore all other messages - they should be handled by business-specific webhooks
                 logger.info(f"Ignoring non-system message from {phone_number} - should be handled by business webhook")
