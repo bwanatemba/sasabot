@@ -165,7 +165,6 @@ def process_gpt_interaction(phone_number, message, business_id=None):
             messages=conversation_messages,
             max_tokens=500,
             temperature=0.7
-            ]
         )
         
         gpt_response = response.choices[0].message.content
