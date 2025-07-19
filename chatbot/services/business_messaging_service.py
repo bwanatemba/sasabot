@@ -317,12 +317,20 @@ def handle_business_user_message(data):
             if is_business_greeting(message):
                 return send_business_greeting(phone_number, business, customer)
             
-            # Default response for unrecognized messages
-            return send_business_whatsapp_text_message(
-                phone_number,
-                f"Thank you for your message. How can {business.name} assist you today? Please use our menu options for better service.",
-                business
-            )
+            # For all other text messages, send to GPT for business-specific response
+            try:
+                from services.openai_service import process_gpt_interaction
+                gpt_response = process_gpt_interaction(phone_number, message, str(business.id))
+                return jsonify({"message": "Business GPT response sent", "gpt_response": gpt_response}), 200
+            except Exception as e:
+                logger.error(f"Error processing GPT interaction for business {business.name}: {str(e)}")
+                # Fallback to generic response if GPT fails
+                fallback_result = send_business_whatsapp_text_message(
+                    phone_number,
+                    f"I'm having trouble processing your request right now. Please try again or contact {business.name} directly for assistance.",
+                    business
+                )
+                return jsonify({"message": "Fallback response sent", "whatsapp_response": fallback_result}), 200
         
         # If neither message nor button_id provided
         return jsonify({"error": "No message or button data provided"}), 400

@@ -143,11 +143,28 @@ def process_gpt_interaction(phone_number, message, business_id=None):
                 return handle_product_details(phone_number, product_id, business.id)
         
         # Business-specific GPT response using fine-tuned model
+        # Build conversation history for context
+        conversation_messages = [
+            {"role": "system", "content": f"{business_context}\n\nYou are a customer service assistant for {business.name}. Use the custom instructions to guide your responses. Keep responses helpful and business-focused. Handle customer inquiries, product questions, orders, and support for this specific business only."}
+        ]
+        
+        # Add conversation history (limit to last 10 exchanges to avoid token limits)
+        recent_messages = session.messages[-20:] if len(session.messages) > 20 else session.messages
+        for msg in recent_messages:
+            if msg.sender_type == 'customer':
+                conversation_messages.append({"role": "user", "content": msg.message_text})
+            elif msg.sender_type == 'gpt':
+                conversation_messages.append({"role": "assistant", "content": msg.message_text})
+        
+        # Add current message if not already added
+        if not recent_messages or recent_messages[-1].message_text != message:
+            conversation_messages.append({"role": "user", "content": message})
+        
         response = client.chat.completions.create(
             model="ft:gpt-3.5-turbo-1106:meira-africa-education-solutions::AzJSAPGn", #Business Model
-            messages=[
-                {"role": "system", "content": f"{business_context}\n\nYou are a customer service assistant for {business.name}. Use the custom instructions to guide your responses. Keep responses helpful and business-focused. Handle customer inquiries, product questions, orders, and support for this specific business only."},
-                {"role": "user", "content": message}
+            messages=conversation_messages,
+            max_tokens=500,
+            temperature=0.7
             ]
         )
         
@@ -161,16 +178,16 @@ def process_gpt_interaction(phone_number, message, business_id=None):
         session.messages.append(gpt_message)
         session.save()
         
-        # Send response via WhatsApp
-        from services.messaging_service import send_whatsapp_text_message
-        send_whatsapp_text_message(phone_number, gpt_response)
+        # Send response via WhatsApp using business-specific messaging
+        from services.business_messaging_service import send_business_whatsapp_text_message
+        send_business_whatsapp_text_message(phone_number, gpt_response, business)
         
         return gpt_response
     
     except Exception as e:
         logger.error(f"OpenAI interaction error: {str(e)}")
-        from services.messaging_service import send_whatsapp_text_message
-        send_whatsapp_text_message(phone_number, "Sorry, I'm having trouble processing your request right now.")
+        from services.business_messaging_service import send_business_whatsapp_text_message
+        send_business_whatsapp_text_message(phone_number, "Sorry, I'm having trouble processing your request right now.", business)
         raise
 
 def process_system_gpt_interaction(phone_number, message):

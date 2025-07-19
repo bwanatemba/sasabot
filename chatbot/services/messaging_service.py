@@ -318,10 +318,16 @@ def handle_business_message(data):
                                   "Send 'hi' to our main number to get started with Sasabot platform.")
                     return send_whatsapp_text_message(phone_number, guidance_msg)
             
-            # Process business-specific GPT interaction
-            from services.openai_service import process_gpt_interaction
-            response = process_gpt_interaction(phone_number, message, business_id)
-            return jsonify({"message": "Business GPT response sent", "gpt_response": response}), 200
+            # Process business-specific GPT interaction for all non-trigger word messages
+            try:
+                from services.openai_service import process_gpt_interaction
+                response = process_gpt_interaction(phone_number, message, business_id)
+                return jsonify({"message": "Business GPT response sent", "gpt_response": response}), 200
+            except Exception as e:
+                logger.error(f"Error processing GPT interaction for business {business_id}: {str(e)}")
+                # Fallback to generic response if GPT fails
+                fallback_msg = "I'm having trouble processing your request right now. Please try again or contact us directly for assistance."
+                return send_whatsapp_text_message(phone_number, fallback_msg)
         
         return jsonify({"error": "No message or button data provided"}), 400
         
