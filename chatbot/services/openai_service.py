@@ -5,6 +5,16 @@ from dotenv import load_dotenv
 from models import Business, Product, ProductVariation, Category, Order, Customer, ChatSession, ChatMessage
 import re
 
+# GPT CONVERSATION TYPES:
+# 1. System-level GPT (process_system_gpt_interaction): 
+#    - Handles general Sasabot platform inquiries
+#    - Uses standard GPT model
+#    - No business context
+# 2. Business-specific GPT (process_gpt_interaction):
+#    - Handles customer service for specific businesses
+#    - Uses fine-tuned business model
+#    - Has full business context and capabilities
+
 load_dotenv()
 logger = logging.getLogger(__name__)
 
@@ -60,7 +70,11 @@ def initialize_openai_client():
         raise
 
 def process_gpt_interaction(phone_number, message, business_id=None):
-    """Process GPT interaction with business context"""
+    """
+    Process business-specific GPT interaction with business context
+    This handles customer interactions for specific businesses only
+    For general platform inquiries, use process_system_gpt_interaction instead
+    """
     try:
         client = initialize_openai_client()
         
@@ -128,11 +142,11 @@ def process_gpt_interaction(phone_number, message, business_id=None):
             if product_id:
                 return handle_product_details(phone_number, product_id, business.id)
         
-        # General GPT response
+        # Business-specific GPT response using fine-tuned model
         response = client.chat.completions.create(
-            model="ft:gpt-3.5-turbo-1106:meira-africa-education-solutions::AzJSAPGn",
+            model="ft:gpt-3.5-turbo-1106:meira-africa-education-solutions::AzJSAPGn", #Business Model
             messages=[
-                {"role": "system", "content": f"{business_context}\n\nYou are a customer service assistant for {business.name}. Use the custom instructions to guide your responses. Keep responses helpful and business-focused."},
+                {"role": "system", "content": f"{business_context}\n\nYou are a customer service assistant for {business.name}. Use the custom instructions to guide your responses. Keep responses helpful and business-focused. Handle customer inquiries, product questions, orders, and support for this specific business only."},
                 {"role": "user", "content": message}
             ]
         )
@@ -158,6 +172,88 @@ def process_gpt_interaction(phone_number, message, business_id=None):
         from services.messaging_service import send_whatsapp_text_message
         send_whatsapp_text_message(phone_number, "Sorry, I'm having trouble processing your request right now.")
         raise
+
+def process_system_gpt_interaction(phone_number, message):
+    """
+    Process system-level GPT interaction for general Sasabot platform inquiries
+    This is separate from business-specific GPT conversations
+    """
+    try:
+        client = initialize_openai_client()
+        
+        # System-level context about Sasabot platform
+        system_context = """
+        You are a helpful assistant for the Sasabot platform - a digital transformation solution for businesses.
+        
+        Sasabot Platform Information:
+        - Sasabot helps businesses automate customer interactions through WhatsApp and other messaging platforms
+        - We provide AI-powered chatbots, automated responses, and customer service solutions
+        - Businesses can onboard to create their own chatbot for customer interactions
+        - We support product catalogs, order management, payment processing, and customer support automation
+        - The platform improves response times, reduces operational costs, and enhances service quality
+        
+        You should help users with:
+        - General questions about the Sasabot platform
+        - Information about our services and capabilities
+        - Guidance on how to get started
+        - Platform features and benefits
+        - Technical support for platform usage
+        
+        You should NOT handle:
+        - Business-specific customer service (that's handled by business-specific bots)
+        - Product purchases or orders (that's for individual business bots)
+        - Payment processing for specific businesses
+        
+        Keep responses helpful, informative, and focused on the Sasabot platform itself.
+        If someone asks about specific business products or services, guide them to contact the specific business.
+        """
+        
+        # Check if this is a simple platform inquiry
+        message_lower = message.lower()
+        platform_keywords = ['sasabot', 'platform', 'how does it work', 'what is this', 'help', 'support', 'features', 'benefits']
+        
+        if any(keyword in message_lower for keyword in platform_keywords):
+            # This is a platform-related inquiry, process with GPT
+            response = client.chat.completions.create(
+                model="ft:gpt-3.5-turbo-1106:meira-africa-education-solutions::AzJSAPGn",  # Sasabot Model
+                messages=[
+                    {"role": "system", "content": system_context},
+                    {"role": "user", "content": message}
+                ],
+                max_tokens=500,
+                temperature=0.7
+            )
+            
+            gpt_response = response.choices[0].message.content
+            
+            # Log the system-level conversation (optional)
+            logger.info(f"System GPT conversation - Phone: {phone_number}, Message: {message[:50]}...")
+            
+            # Send response via WhatsApp
+            from services.messaging_service import send_whatsapp_text_message
+            return send_whatsapp_text_message(phone_number, gpt_response)
+        else:
+            # Not a platform inquiry, provide guidance
+            guidance_msg = ("I can help you with questions about the Sasabot platform. "
+                          "For specific business inquiries, please contact the business directly.\n\n"
+                          "Ask me about:\n"
+                          "• How Sasabot works\n"
+                          "• Platform features and benefits\n"
+                          "• Getting started with Sasabot\n"
+                          "• Technical support\n\n"
+                          "Or type 'onboarding' to register your business.")
+            
+            from services.messaging_service import send_whatsapp_text_message
+            return send_whatsapp_text_message(phone_number, guidance_msg)
+    
+    except Exception as e:
+        logger.error(f"System GPT interaction error: {str(e)}")
+        from services.messaging_service import send_whatsapp_text_message
+        fallback_msg = ("I'm having trouble right now. For immediate help:\n\n"
+                       "• Type 'about' for platform info\n"
+                       "• Type 'faqs' for common questions\n"
+                       "• Type 'onboarding' to register your business")
+        return send_whatsapp_text_message(phone_number, fallback_msg)
 
 def determine_intent(message):
     """Determine the intent of the customer message"""

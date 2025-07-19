@@ -37,6 +37,297 @@ def verify_business_webhook(business_id):
             return challenge
         return jsonify({"error": "Invalid verification token"}), 403
 
+def handle_system_onboarding_trigger(phone_number):
+    """Handle initial system trigger words for onboarding"""
+    try:
+        # Send welcome message with onboarding options
+        buttons = [
+            {"text": "About Sasabot", "id": "about"},
+            {"text": "FAQs", "id": "faqs"},
+            {"text": "Begin Onboarding", "id": "onboarding"}
+        ]
+        
+        response = send_whatsapp_interactive_message(
+            phone_number,
+            "Welcome to Sasabot",
+            "Glad to have you here. We help businesses transition to digital interactions with their clients, improving speed and the quality of service",
+            "Select an option to start",
+            buttons
+        )
+        
+        return jsonify({"message": "System welcome message sent", "whatsapp_response": response}), 200
+        
+    except Exception as e:
+        logger.error(f"Error handling system onboarding trigger: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+def handle_system_message(data):
+    """
+    Handle system-level messages (onboarding only)
+    """
+    try:
+        if not data or not isinstance(data, dict):
+            return jsonify({"error": "Invalid data format"}), 400
+        
+        phone_number = data.get('phone_number')
+        message = data.get('message')
+        button_id = data.get('button_id')
+        
+        if not phone_number:
+            return jsonify({"error": "Missing phone number"}), 400
+            
+        # Clean phone number while preserving international format
+        phone_number = clean_phone_number(phone_number)
+
+        try:
+            # Handle button responses for system interactions
+            if button_id:
+                response = handle_system_button_response(phone_number, button_id)
+                return jsonify({"message": "System button response sent", "whatsapp_response": response}), 200
+            
+            # Handle text messages for system interactions
+            if message:
+                # Check if user is in onboarding
+                onboarding_state = OnboardingState.objects(phone_number=phone_number).first()
+                if onboarding_state:
+                    response = onboarding_service.handle_onboarding_response(phone_number, message=message)
+                    return jsonify({"message": "Onboarding response sent", "whatsapp_response": response}), 200
+                else:
+                    # Handle general system-level GPT conversations (not business-specific)
+                    # This is for general inquiries about Sasabot platform itself
+                    response = handle_system_gpt_conversation(phone_number, message)
+                    return jsonify({"message": "System GPT response sent", "whatsapp_response": response}), 200
+            
+            return jsonify({"error": "No message or button data provided"}), 400
+            
+        except Exception as e:
+            logger.error(f"System message processing error: {str(e)}")
+            return jsonify({"error": "Failed to process message"}), 500
+            
+    except Exception as e:
+        logger.error(f"System message handling error: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+def handle_system_button_response(phone_number, button_id):
+    """
+    Handle system-level button responses (onboarding and info only)
+    """
+    try:
+        # Check if user is in onboarding
+        onboarding_state = OnboardingState.objects(phone_number=phone_number).first()
+        if onboarding_state:
+            return onboarding_service.handle_onboarding_response(phone_number, button_id=button_id)
+        
+        # Handle system menu buttons only
+        if button_id == "about":
+            message = ("🤖 *About Sasabot*\n\n"
+                      "Sasabot is an innovative digital transformation platform that helps businesses:\n\n"
+                      "✅ Automate customer interactions\n"
+                      "✅ Improve response times\n"
+                      "✅ Enhance service quality\n"
+                      "✅ Reduce operational costs\n"
+                      "✅ Scale customer support efficiently\n\n"
+                      "We make it easy for businesses to connect with their customers through modern messaging platforms.")
+        
+        elif button_id == "faqs":
+            message = ("❓ *Frequently Asked Questions*\n\n"
+                      "*Q: What is Sasabot?*\n"
+                      "A: Sasabot is a digital transformation platform for businesses to automate customer interactions.\n\n"
+                      "*Q: How does it work?*\n"
+                      "A: We integrate with your existing systems to provide automated responses and streamline customer communication.\n\n"
+                      "*Q: What platforms do you support?*\n"
+                      "A: We support WhatsApp, SMS, and other popular messaging platforms.\n\n"
+                      "*Q: How much does it cost?*\n"
+                      "A: Pricing varies based on your business needs. Contact us for a custom quote.")
+        
+        elif button_id == "onboarding":
+            return onboarding_service.start_onboarding(phone_number)
+        
+        else:
+            # Ignore all other button responses - they should be handled by business webhooks
+            logger.info(f"Ignoring non-system button response: {button_id}")
+            return jsonify({"status": "ok"}), 200
+        
+        return send_whatsapp_text_message(phone_number, message)
+        
+    except Exception as e:
+        logger.error(f"Error handling system button response: {str(e)}")
+        raise
+
+def handle_system_gpt_conversation(phone_number, message):
+    """
+    Handle system-level GPT conversations for general platform inquiries
+    This is separate from business-specific GPT conversations
+    """
+    try:
+        from services.openai_service import process_system_gpt_interaction
+        response = process_system_gpt_interaction(phone_number, message)
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error in system GPT conversation: {str(e)}")
+        # Fallback response
+        fallback_msg = ("I'm having trouble processing your request right now. "
+                       "For general questions about Sasabot, you can:\n\n"
+                       "• Type 'about' for platform information\n"
+                       "• Type 'faqs' for frequently asked questions\n"
+                       "• Type 'onboarding' to start business registration")
+        
+        return send_whatsapp_text_message(phone_number, fallback_msg)
+
+def process_business_whatsapp_message(data, business_id):
+    """
+    Process WhatsApp messages for business-specific webhooks
+    This should be used by individual business webhooks to handle:
+    - Customer status updates and delivery receipts
+    - Business-specific customer interactions
+    - Product orders and customer service
+    """
+    try:
+        logger.info(f"Received business webhook data for business {business_id}: {data}")
+        
+        # Check if data exists and has required structure
+        if not data:
+            logger.warning("Received empty business webhook data")
+            return jsonify({"status": "ok"}), 200
+            
+        if 'entry' not in data:
+            logger.warning("Business webhook data missing 'entry'")
+            return jsonify({"status": "ok"}), 200
+            
+        entry = data['entry'][0]
+        if 'changes' not in entry:
+            logger.warning("Business webhook data missing 'changes'")
+            return jsonify({"status": "ok"}), 200
+            
+        changes = entry['changes'][0]
+        if 'value' not in changes:
+            logger.warning("Business webhook data missing 'value'")
+            return jsonify({"status": "ok"}), 200
+            
+        value = changes['value']
+        
+        # Handle business-specific status updates (delivery receipts, read receipts, etc.)
+        if 'statuses' in value:
+            logger.info(f"Processing status update for business {business_id}")
+            return handle_business_status_update(value['statuses'], business_id)
+            
+        if 'messages' not in value:
+            logger.info("No messages in business webhook data")
+            return jsonify({"status": "ok"}), 200
+            
+        messages = value['messages'][0]
+        phone_number = messages.get('from')
+        
+        # Handle business-specific messages
+        if 'text' in messages:
+            message = messages.get('text', {}).get('body', '')
+            if not phone_number or not message:
+                logger.error(f"Missing required fields: phone={phone_number}, message={message}")
+                return jsonify({"error": "Missing required fields"}), 400
+                
+            return handle_business_message({
+                'phone_number': phone_number,
+                'message': message,
+                'business_id': business_id
+            })
+        
+        # Handle button responses for business
+        elif 'interactive' in messages:
+            interactive = messages.get('interactive', {})
+            if 'button_reply' in interactive:
+                button_id = interactive['button_reply'].get('id')
+                if not phone_number or not button_id:
+                    logger.error(f"Missing required fields: phone={phone_number}, button_id={button_id}")
+                    return jsonify({"error": "Missing required fields"}), 400
+                    
+                return handle_business_message({
+                    'phone_number': phone_number,
+                    'button_id': button_id,
+                    'business_id': business_id
+                })
+            elif 'list_reply' in interactive:
+                list_id = interactive['list_reply'].get('id')
+                if not phone_number or not list_id:
+                    logger.error(f"Missing required fields: phone={phone_number}, list_id={list_id}")
+                    return jsonify({"error": "Missing required fields"}), 400
+                    
+                return handle_business_message({
+                    'phone_number': phone_number,
+                    'button_id': list_id,
+                    'business_id': business_id
+                })
+        
+        logger.info("Business webhook processed successfully")
+        return jsonify({"status": "ok"}), 200
+        
+    except Exception as e:
+        logger.error(f"Error processing business WhatsApp webhook: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+def handle_business_status_update(statuses, business_id):
+    """Handle status updates for business webhooks"""
+    try:
+        # Process status updates (delivery receipts, read receipts, etc.)
+        for status in statuses:
+            message_id = status.get('id')
+            status_type = status.get('status')
+            timestamp = status.get('timestamp')
+            
+            logger.info(f"Business {business_id} - Message {message_id} status: {status_type}")
+            
+            # Here you can add business-specific status handling logic
+            # For example, updating message delivery status in the database
+            # or sending notifications to the business
+            
+        return jsonify({"status": "ok"}), 200
+        
+    except Exception as e:
+        logger.error(f"Error handling business status update: {str(e)}")
+        return jsonify({"status": "ok"}), 200
+
+def handle_business_message(data):
+    """Handle business-specific customer messages"""
+    try:
+        phone_number = data.get('phone_number')
+        message = data.get('message')
+        button_id = data.get('button_id')
+        business_id = data.get('business_id')
+        
+        if not phone_number or not business_id:
+            return jsonify({"error": "Missing required fields"}), 400
+            
+        # Clean phone number
+        phone_number = clean_phone_number(phone_number)
+        
+        # Handle button responses for business interactions
+        if button_id:
+            response = handle_button_response(phone_number, button_id)
+            return jsonify({"message": "Business button response sent", "whatsapp_response": response}), 200
+        
+        # Handle text messages for business interactions
+        if message:
+            # Check for trigger words - if new conversation, might need to redirect to system
+            if is_trigger_word(message):
+                # Check if this business has existing customer relationship
+                customer = Customer.objects(phone_number=phone_number).first()
+                if not customer:
+                    # New customer, redirect to system webhook
+                    guidance_msg = ("Hi! For initial setup and onboarding, please contact our main system.\n\n"
+                                  "Send 'hi' to our main number to get started with Sasabot platform.")
+                    return send_whatsapp_text_message(phone_number, guidance_msg)
+            
+            # Process business-specific GPT interaction
+            from services.openai_service import process_gpt_interaction
+            response = process_gpt_interaction(phone_number, message, business_id)
+            return jsonify({"message": "Business GPT response sent", "gpt_response": response}), 200
+        
+        return jsonify({"error": "No message or button data provided"}), 400
+        
+    except Exception as e:
+        logger.error(f"Error handling business message: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 def process_whatsapp_message(data):
     try:
         logger.info(f"Received WhatsApp webhook data: {data}")
@@ -63,8 +354,10 @@ def process_whatsapp_message(data):
         value = changes['value']
         
         # Handle status updates (delivery receipts, read receipts, etc.)
+        # These should be handled by business-specific webhooks, not the system webhook
         if 'statuses' in value:
-            logger.info("Received status update webhook")
+            logger.info("Received status update webhook - should be handled by business webhook")
+            # System webhook ignores status updates - they belong to business webhooks
             return jsonify({"status": "ok"}), 200
             
         if 'messages' not in value:
@@ -75,6 +368,25 @@ def process_whatsapp_message(data):
         
         phone_number = messages.get('from')
         
+        # SYSTEM WEBHOOK - Only handle onboarding and system-level interactions
+        # Check if user is in onboarding process
+        onboarding_state = OnboardingState.objects(phone_number=phone_number).first()
+        if not onboarding_state:
+            # Check for system trigger words to start onboarding
+            message_text = ""
+            if 'text' in messages:
+                message_text = messages.get('text', {}).get('body', '').lower().strip()
+            
+            # Only respond to initial trigger words for system onboarding
+            if message_text in ["hi", "hello", "sasabot", "start"]:
+                logger.info(f"System trigger word detected from {phone_number}: {message_text}")
+                return handle_system_onboarding_trigger(phone_number)
+            else:
+                # Ignore all other messages - they should be handled by business-specific webhooks
+                logger.info(f"Ignoring non-system message from {phone_number} - should be handled by business webhook")
+                return jsonify({"status": "ok"}), 200
+        
+        # Handle onboarding interactions for users already in onboarding process
         # Handle text messages
         if 'text' in messages:
             message = messages.get('text', {}).get('body', '')
@@ -82,7 +394,7 @@ def process_whatsapp_message(data):
                 logger.error(f"Missing required fields: phone={phone_number}, message={message}")
                 return jsonify({"error": "Missing required fields"}), 400
                 
-            return handle_user_message({
+            return handle_system_message({
                 'phone_number': phone_number,
                 'message': message
             })
@@ -96,7 +408,7 @@ def process_whatsapp_message(data):
                     logger.error(f"Missing required fields: phone={phone_number}, button_id={button_id}")
                     return jsonify({"error": "Missing required fields"}), 400
                     
-                return handle_user_message({
+                return handle_system_message({
                     'phone_number': phone_number,
                     'button_id': button_id
                 })
@@ -106,13 +418,13 @@ def process_whatsapp_message(data):
                     logger.error(f"Missing required fields: phone={phone_number}, list_id={list_id}")
                     return jsonify({"error": "Missing required fields"}), 400
                     
-                return handle_user_message({
+                return handle_system_message({
                     'phone_number': phone_number,
                     'button_id': list_id  # Use same parameter name for consistency
                 })
         
-        logger.error("Unsupported message type")
-        return jsonify({"error": "Unsupported message type"}), 400
+        logger.info("System webhook ignoring non-onboarding message")
+        return jsonify({"status": "ok"}), 200
         
     except Exception as e:
         logger.error(f"Error processing WhatsApp webhook: {str(e)}")
@@ -830,6 +1142,19 @@ def is_mpesa_number(message):
     """Check if message is an Mpesa phone number"""
     cleaned = ''.join(filter(str.isdigit, message))
     return len(cleaned) in [9, 10, 12] and (cleaned.startswith('0') or cleaned.startswith('254'))
+
+def is_trigger_word(message):
+    """
+    Check if the message contains trigger words
+    """
+    trigger_words = ["hi", "hello", "sasabot"]
+    return message.lower().strip() in trigger_words
+
+# =============================================================================
+# DEPRECATED FUNCTIONS - FOR BUSINESS-SPECIFIC WEBHOOKS ONLY
+# These functions should NOT be called from the system webhook
+# They are kept for backward compatibility and business webhook usage
+# =============================================================================
 
 def handle_user_message(data):
     """
