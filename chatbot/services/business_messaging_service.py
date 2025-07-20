@@ -347,6 +347,7 @@ def send_business_greeting(phone_number, business, customer):
         # Define menu options
         menu_options = [
             {"text": "Browse Categories", "id": "browse_categories", "description": "View our product categories"},
+            {"text": "Browse Products", "id": "browse_products", "description": "View all available products"},
             {"text": "View My Orders", "id": "view_orders", "description": "Check your order history and status"},
             {"text": "Issue with Order", "id": "order_issue", "description": "Report a problem with your order"},
             {"text": "Update Your Details", "id": "update_details", "description": "Update your contact information"}
@@ -388,6 +389,12 @@ def handle_business_button_response(phone_number, button_id, business, customer,
         if button_id == "browse_categories":
             return send_categories_menu(phone_number, business, customer)
         
+        elif button_id == "browse_products":
+            return send_browse_products_message(phone_number, business, customer)
+        
+        elif button_id == "view_catalog":
+            return send_all_products(phone_number, business, customer)
+        
         elif button_id == "view_orders":
             return send_customer_orders(phone_number, business, customer)
         
@@ -419,6 +426,79 @@ def handle_business_button_response(phone_number, button_id, business, customer,
     except Exception as e:
         logger.error(f"Error handling business button response: {str(e)}")
         return jsonify({"error": "Failed to handle button response"}), 500
+
+def send_browse_products_message(phone_number, business, customer):
+    """Send a message with 'View catalog' button to display all products"""
+    try:
+        body_text = f"Welcome to {business.name}'s product catalog! Click the button below to view all our available products."
+        
+        buttons = [
+            {"text": "View Catalog", "id": "view_catalog"}
+        ]
+        
+        response = send_business_whatsapp_interactive_message(
+            phone_number,
+            "Browse Products",
+            body_text,
+            "Select an option",
+            buttons,
+            business
+        )
+        
+        save_chat_message(customer, business, 'gpt', body_text, 'interactive')
+        return jsonify({"message": "Browse products message sent", "whatsapp_response": response}), 200
+        
+    except Exception as e:
+        logger.error(f"Error sending browse products message: {str(e)}")
+        return jsonify({"error": "Failed to send browse products message"}), 500
+
+def send_all_products(phone_number, business, customer):
+    """Send all active products for the business"""
+    try:
+        products = Product.objects(business=business, is_active=True)
+        
+        if not products:
+            return send_business_whatsapp_text_message(
+                phone_number,
+                f"Sorry, {business.name} doesn't have any products available right now. Please check back later.",
+                business
+            )
+        
+        # Build products message
+        message = f"*{business.name} - Product Catalog*\n\n"
+        
+        for i, product in enumerate(products, 1):
+            message += f"{i}. *{product.name}*\n"
+            message += f"   💰 Price: KSH {product.price}\n"
+            
+            if product.description:
+                # Limit description to 100 characters to keep message manageable
+                description = product.description[:100]
+                if len(product.description) > 100:
+                    description += "..."
+                message += f"   📝 {description}\n"
+            
+            if product.category:
+                message += f"   📂 Category: {product.category.name}\n"
+            
+            message += "\n"
+            
+            # WhatsApp message limit is around 4096 characters, so we need to split if too long
+            if len(message) > 3500:  # Leave some buffer
+                message += f"... and {len(products) - i} more products.\n\n"
+                break
+        
+        message += f"💬 To place an order or get more details about any product, please contact {business.name} directly.\n\n"
+        message += "📞 You can also ask our AI assistant about specific products by typing your questions!"
+        
+        response = send_business_whatsapp_text_message(phone_number, message, business)
+        
+        save_chat_message(customer, business, 'gpt', f"All products catalog displayed ({len(products)} products)", 'text')
+        return jsonify({"message": "All products sent", "whatsapp_response": response}), 200
+        
+    except Exception as e:
+        logger.error(f"Error sending all products: {str(e)}")
+        return jsonify({"error": "Failed to send all products"}), 500
 
 def send_categories_menu(phone_number, business, customer):
     """Send interactive menu of categories"""
