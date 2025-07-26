@@ -481,6 +481,10 @@ def send_all_products(phone_number, business, customer):
             if product.category:
                 message += f"   📂 Category: {product.category.name}\n"
             
+            # Add wa.me link for product details and checkout
+            wa_link = f"https://wa.me/{business.whatsapp_phone_id or os.getenv('WHATSAPP_PHONE_ID')}?text=Product%20Details:%20{product.id}"
+            message += f"   🛒 Get Details & Order: {wa_link}\n"
+            
             message += "\n"
             
             # WhatsApp message limit is around 4096 characters, so we need to split if too long
@@ -899,9 +903,16 @@ def send_category_products(phone_number, business, customer, category_id):
         message = f"*{category.name} Products*\n\n"
         for i, product in enumerate(products[:10], 1):  # Limit to 10 products
             message += f"{i}. *{product.name}*\n"
-            message += f"   Price: KSH {product.price}\n"
+            message += f"   💰 Price: KSH {product.price}\n"
             if product.description:
-                message += f"   {product.description[:50]}...\n"
+                description = product.description[:50]
+                if len(product.description) > 50:
+                    description += "..."
+                message += f"   📝 {description}\n"
+            
+            # Add wa.me link for product details and checkout
+            wa_link = f"https://wa.me/{business.whatsapp_phone_id or os.getenv('WHATSAPP_PHONE_ID')}?text=Product%20Details:%20{product.id}"
+            message += f"   🛒 Get Details & Order: {wa_link}\n"
             message += "\n"
         
         if len(products) > 10:
